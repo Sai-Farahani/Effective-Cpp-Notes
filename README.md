@@ -135,3 +135,5 @@ These functions are generated only if they are needed.
 
 	e2 = e1; // creates the copy assignment operator
 
+Summarization:
+- The compiler can automatically generate defaulty constructors, copy constructors, cpopy assignment operators and destructors for classes
