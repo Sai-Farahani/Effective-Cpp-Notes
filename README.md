@@ -107,3 +107,31 @@ Summarization:
 - Manual initialization for built in objects, because C++ does not guarentee that they are initalized
 - Constructors are prerably initialized with columns rather than copying, and they are initialized in order
 - To avoid initialzation order issues for cross-file compilation, cono loact static obkjects should be replaced with local static objects
+
+# 5. Know what function C++ silently writes and calls
+
+C++ declares their own versions of a copy constructor, a copy assignment opeerator, and a destructor if you don't declare them yourself
+
+	class Empty();
+
+is essentaillz the same as if you'd written:
+
+	class Empty
+	{
+	public:
+		Empty() { ... }
+		Empty(const Empty& rhs) { ... }
+
+		~Empty() { ... }
+		
+		Empty& perator=(const Empty& rhs) { ... }
+	};
+
+These functions are generated only if they are needed.
+
+	Empty e1; // creates the default constructor and destructor(non virtual)
+
+	Empty e1(e1); // creates the copy constructor
+
+	e2 = e1; // creates the copy assignment operator
+
