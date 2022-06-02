@@ -369,3 +369,79 @@ Summarization:
 
 # 14. Think carefully about copying behavior in resource-managing classes
 
+In the resource managing class, if there is a copy behavior, you need to pay attention to the specific meaning of this copy, to ensure you get the effect you want.
+
+	class Lock
+	{
+	public:
+		explicit Lock(Mutex *pm) : mutexPtr(pm)
+		{
+			lock(mutexPtr);
+		}
+		~Lock()
+		{
+			unlock(mutexPtr);
+		}
+	private:
+		Mutex *mutexPtr;
+	};
+
+	Lock m1(&m);
+	Lock m2(m1);
+
+The copy function may be gets automatically created by the compiler, so when using it, we must pay attention to whether the atomtically generated function fulfills our expectations.
+
+Summarization:
+- Copying the RAII object(Resource Aquisition is Initialization) must also copy the resource it manages(deep copy)
+- Common RAII practise is: Prohibit copying, use the reference counting method
+
+# 15. Provide accsess to raw resources in resource-managing classes
+
+Provide accsess to raw resources in resource-managing classes with methods such as shared_ptr<>.get(), or -> and * to obtain values. But such a metrhod can be slightly cumbersome, some people will use an implicit conversion, but those often go wrong.
+
+	class Font;
+	class FontHandle;
+	void changeFontSize(FontHandle f, int newSize) {...}
+
+	Font f(getFont());
+	int newFontSize = 3;
+	changeFontSize(f.get(), newFontSize); // explicit
+
+	class Font
+	{
+		operator FontHandle() const
+		{
+			return f; // implicit
+		}
+	};
+	changeFontSize(f, newFontSize);
+	Font f1(getFont());
+	FontHandle f2 = f1;
+
+Summarization:
+- Every resource management class should have a method to obtain resources directly
+- Implicit coversion is more convieneiet for clients. and explicit conversion is safer, you should choose depeneding on the requirements
+
+# 16. Use the same form in corresponding uses of new and delete
+
+Summarization:
+- When using new[], use delete[], when using new don't use delete[]
+
+# 17. Store newed objetcs in smart pointers in standalone statements
+
+	int priority();
+	void processWidget(sharded_ptr<Widget> pw, int priority);
+	processWidget(new Widget, priority()); // error needs normal raw pointer
+	processWidget(shared_ptr<Widget>(new Widget), priority()); // may cause memory leaks
+
+	/*	The reason for the memory leak is that first it first executes the new for the widget, then it calls priority and then finally it calls the shared_ptr constructor. And when an exception occurs in the priority call, the pointer
+		returned by the new Widget will be lost. Of course, different compilerers exceute the above code in different order. But there is a safe way to do this.
+	*/
+
+	shared_ptr<Widget> pw(new Widget);
+	processWidget(pw, priority());
+
+Summarization:
+- Whenever there is a new statement, try to put it in a separate statement, especially when using the new object to put it in a smart pointer
+
+# 18. Make interfaces easy to use correctly and hard to use incorrectly
