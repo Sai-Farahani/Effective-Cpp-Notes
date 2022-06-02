@@ -232,6 +232,7 @@ Summarization:
 
 You should not call virtual functions in the destructor and constructor, because the wrong version of the function is called when there is inheritance such as:
 
+	// Original Code
 	class Transaction
 	{
 	public:
@@ -302,3 +303,53 @@ You should have assignment operators return a reference to *this to support cont
 	}
 
 	// a = b = c;
+
+# 11. Handle assignment to self in operator=
+
+You should mainly handle assignment to self in operator= because there may be a securtity issue or the original object is destroyed before being used.
+
+	// Original Code
+	class Bitmap {...};
+	class Widget
+	{
+	private:
+		Bitmap *pb;
+	};
+
+	Widget& Widget::operator=(const Widget& rhs)
+	{
+		delete pb;
+		pb = new Bitmap(*rhs.pb);
+		return *this;
+	}
+
+
+
+	// Better Code
+	class Widget
+	{
+		void swap(Widget& rhs);
+	};
+
+	Widget& Widget::operator=(const Widget* rhs)
+	{
+		Widget temp(rhs);
+		swap(temp);
+		return *this;
+	}
+
+There is also a less efficient version:
+
+	Widget& Widget::operator=(const Widget& rhs)
+	{
+		Bitmap *pOrig = pb;
+		pb = new Bitmap(*rhs.pb);
+		delete pOrig;
+		return *this;
+	}
+
+Summarize:
+- Ensure that operator= behaves well when objects are self-assigned, inlcuding addresses of two objects, statement order and copy-and-swap
+- Make sure that any function is still correct if it operates on more than one object, many of which may point to the same object
+
+# 12. Copy all parts of an object
