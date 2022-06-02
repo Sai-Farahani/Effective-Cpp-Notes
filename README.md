@@ -348,15 +348,24 @@ There is also a less efficient version:
 		return *this;
 	}
 
-Summarize:
+Summarization:
 - Ensure that operator= behaves well when objects are self-assigned, inlcuding addresses of two objects, statement order and copy-and-swap
 - Make sure that any function is still correct if it operates on more than one object, many of which may point to the same object
 
 # 12. Copy all parts of an object
 
-Summarize:
+Summarization:
 - When writing a copy constructor or copy assignment constructor, you should make sure to copy all variables inside the members, as well as all base class memebers
 - Don't try to use one copy constructor to call another copy constructor, if you want to somplify the code, you should put all the functions in a third function(init) and call it by both copy constructors
 - When a new varibale is added or a class is inherited, it is easy to forget the copy constructor, so each time a varbiale is added, the corresponding method needs to be modified in the copy constructor
 
 # 13. Use objects to manage resources
+
+You should use objects to manage resources to prevent a return before thge delete statement is executes, so objects need to be used to manage these resources. In this way, when the flow of control leaves f, the object's destructor will automaticallyt release those resources. For example shared_ptr and auto_ptr are such objetc's that manage those resources. They do thge delete operation in their own destructor.
+
+Summarization:
+- It is recommended to use shared_ptr
+- If you need a customized shared_ptr, you should manage resources by defining your own resource management class
+
+# 14. Think carefully about copying behavior in resource-managing classes
+
