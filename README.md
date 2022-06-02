@@ -155,7 +155,7 @@ If the base class does not have a virtual destructor, then twhenm the deriuved c
 		TimeKepper();
 		~TimeKepper();
 		virtual getTimeKeeper();
-	}
+	};
 
 	class AtomicClock : public TimerKeeper {}
 	TimeKepper *ptk = getTimeKeeper();
@@ -220,4 +220,85 @@ If 10 Widgets are destructed in a looop, and each Widget throws and exception wh
 	private:
 		bool closed;
 		DBConnection db;
+	};
+
+That way the close method can be handed over to the user, and when the user ignores it, it can also "force the end of the program" or "swallow the exception".
+
+Summarization:
+- Destructors should not throw exceptions, because they should be caught internally
+- If a client needs to react to an exception thrown by an operation, the operation should be placed in a normal function(not the destructor).
+
+# 9. Never call virtual functions during construction or destruction
+
+You should not call virtual functions in the destructor and constructor, because the wrong version of the function is called when there is inheritance such as:
+
+	class Transaction
+	{
+	public:
+		Transaction()
+		{
+			logTransaction();
+		}
+		virtual void logTransaction const() = 0;
+	};
+
+	class BuyTransaction : public Transaction
+	{
+	public:
+		virtual void logTransaction() const;
+	};
+
+	BuyTransaction bt;
+
+	class Transaction{
+	public:
+		Transaction()
+		{
+			init();
+		}
+	private:
+		void init()
+		{
+			logTransaction();
+		}
+	};
+
+At this time, the code will call the Transaction version of logTransaction. Because the construtor of the parent class is called first int the constructor, the logTransaction vertsion of the parent class will be fcalled first. The solutiuon is to not call it in the constructor nor to call the virtual one. But to make it non-virtual.
+
+	// Better Code
+	class Transaction
+	{
+	public:
+		explicit Transaction(const std::string& logInfo);
+		void logTransaction(const std::string& logInfo) const; // non virtual funtion
+	};
+
+	Transaction::Transaction(const std::strinbg* logInfo)
+	{
+		logTransaction(logInfo);	// non virtual
 	}
+
+	class BuyTransaction : public Transaction {
+	public:
+		BuyTransaction(parameters) : Transactrion(createLogString(parameters)) {...}
+	private:
+		static std::string createLogString(paramaeters);
+	};
+
+Summarization:
+- Do not call virtual functions during construction and destruction, as such calls never secend tro the derivced class's version
+
+# 10. Have assignment operators return a reference to *this
+
+You should have assignment operators return a reference to *this to support continous reading and writing.
+
+	class Widget
+	{
+	public:
+		Widget& operator=(int rhs)
+		{
+			return *this;
+		}
+	}
+
+	// a = b = c;
