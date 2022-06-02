@@ -353,3 +353,10 @@ Summarize:
 - Make sure that any function is still correct if it operates on more than one object, many of which may point to the same object
 
 # 12. Copy all parts of an object
+
+Summarize:
+- When writing a copy constructor or copy assignment constructor, you should make sure to copy all variables inside the members, as well as all base class memebers
+- Don't try to use one copy constructor to call another copy constructor, if you want to somplify the code, you should put all the functions in a third function(init) and call it by both copy constructors
+- When a new varibale is added or a class is inherited, it is easy to forget the copy constructor, so each time a varbiale is added, the corresponding method needs to be modified in the copy constructor
+
+# 13. Use objects to manage resources
