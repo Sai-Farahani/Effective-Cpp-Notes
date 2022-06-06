@@ -445,3 +445,203 @@ Summarization:
 - Whenever there is a new statement, try to put it in a separate statement, especially when using the new object to put it in a smart pointer
 
 # 18. Make interfaces easy to use correctly and hard to use incorrectly
+
+There are a lot of errors a client can make, you should create interfaces that are hard to use incorrectly
+
+	Date(int month, int day, int year);
+	/* There are a lot of problems with this piece of code. For example, the client could reverse the order of day and month */
+	Date(const Month &m, const Day &d, const &year);
+	// Note that each type of data is designed as a seperate class here, the month can be limited to only 12 months
+	class Month
+	{
+	public:
+		static Month Jan()
+		{
+			return Month(1);
+		}
+		// here functions are used instead of objects
+	};
+
+	// Functions that return pointers could also become an issue
+	Investment *createInvestment(); // Smart pointers can prevent the user from forgetting to delete the pointer or from deleting the pointer twice
+	std::shared_ptr<Investment> createInvestment(); // You can force the client to use smart pointers and even create custom deleters
+	std::shared_ptr<Investment>pInv(static_cast<Investment*>(0), getRidOfInvestment);
+
+# 19. Treat class design as type design
+
+Consider the following when designing a class:
+- How new class object should be created and constructed
+- What should be the difference between initialization and assignment of objects (different function calls, constructors and assignment operators)
+- What does it mean if the new class is passed by value?
+- What are the resiotrctions on legal values for your new type?
+- Does your new type fit into an inheritance graph?
+- What kind of type conversions are allowed for your new type?
+- What operators and functions make sense for the new type?
+- What standard functions should be disallowed?
+- Who should have access to the memebers of your new type?
+- What is the "undeclared interface" of your new type?
+- How general is your new type?
+- Is a new type really what you need? Maybe it's better to just define a non-member function or template, if you just define a new derived clas or add functionality to the original class, 
+
+# 20. Replce pass-by-value with pass-by-reference-to-const
+Prefer pass-by=reference-to-const to pass-by-value, mainly to improve effciency, while avoiding the problem of parameters cutting between base clases and subclasses
+
+	bool validateSudente(const Student &s);
+	// Saves a lot of construction, destruction and copy assignment operations
+	bool validateSudent(s);
+
+	subStudent s;
+	validateStudent(s);
+	// After calling it the function only receives a student type, and there will be problems if there is an overloaded operation
+
+Summarization:
+- Prefer pass-by-reference-to-const over pass-by-value. It's typically more efficient and it avoids the slicing problem
+- The rule doesn't apply to built-in types and STL iterator and function object types. For them pass-by-value is usually appropriate.
+
+# 21. Don't try to return a reference when you must return an object
+
+It is easy to return a local variable that has been destroyed. If you want to ceeate it with new on the heap, the user can't delete it. Even if you want to use static, there will be a lot of problem.
+
+	inline const Rational operator*(const Rational &lhs, const Rational &rhs)
+	{
+		return Rational(lhs.n * rhs.n, lhs.d * rhs.d);
+	}
+
+Of course, the cost of writing it this way is too high and effciencyt will be relativly low.
+
+# 22. Declare data memeber private
+
+You should make member variables private, and then use public memeber functions to access them. The advantage of this method is that you can control memeber variables more precisely, including controlling read-write, read-only access, etc.
+
+At the same time, if the public variable is changed, and a variable is widely used in the code, then a lot of code is broken and in need to be rewritten.
+
+In addition, protected is not more encapsulating than public, because protected varibales, when changed, their subclasss code will also be destroyed.
+
+# 23. Prefer non-memeber non-friend functions to memeber functions
+
+The difference is as follows
+
+	class WebBrowser
+	{
+	public:
+		void clearCache();
+		void clearHistory();
+		void removeCookies();
+	};
+
+	// member function
+	class WebBrowser
+	{
+	public:
+		// .....
+		void clearEverything()
+		{
+			clearCache();
+			clearHistory();
+			removeCookies();
+		}
+	};
+
+	// non-member non-friend function
+	void clearBrowser(WebBrowser &wb)
+	{
+		wb.clearCache();
+		wb.clearHistory();
+		wb.removeCookies();
+	}
+
+Members can access private functions, enums, typedefs, etc. of the class, but non-memeber functions can't access those things, so non-member non-friend functions are better.
+
+The usage of namespaces is also mentioned here. Namespaces can be used to devide some convenvience function and to put different typed of methods in the same namespace into different files(This is also how the C++ standard library is organized).
+
+	#include "webbrowser.h"
+
+	namespace WebBrowserStuff
+	{
+		class WebBrowser(){...}
+	};
+
+	#include "webbrowserbookmarks.h"
+	namespace WebBrowserStuff
+	{
+		// all bookmark related convenvience functions
+	};
+
+# 24. Declare non-member functions when type conversion should apply to all parameters
+
+If you want to multiply an int type varibale with a Rational variable and it's a member function, when an implicit conversion occurs, an error occurs because there is no type conversion from int to Rational
+
+	class Rational
+	{
+	public:
+		const Rational operator*(const Rational& rhs) const;
+	};
+	Rational oneHalf;
+	result = oneHalf * 2;
+	result = 2 * oneHalf; // Error, tries to convert int to Rational
+
+	non-member
+	class Rational{...};
+	const Rational operator*(const Rational &lhs, const Rational &rhs) {...}
+
+Summarization:
+- If you need type conversions on all parameters to a function(including the one pointed to by the this pointer), the function must be a non-memeber
+
+# 25. Consider support for a non-throwing swap
+
+It is difficult to write a swap that is effcient, less prone to misunderstandings, and has consistency.
+
+	// old code
+	class Widget
+	{
+	public:
+		Widget &operator=(const Widget &rhs)
+		{
+			*pImpl = *(rhs.pImpl); // inefficient
+		}
+	private:
+		WidgetImpl* pImpl;
+	};
+
+	// new code
+	namespace WidgetStuff
+	{
+		template<typename T>
+		class Widget
+		{
+			void swap(Widget &other)
+			{
+				using std::swap; // this declaration is a specialization of std::swap
+				swap(pImpl, other.pImpl);
+			}
+		}
+	};
+
+	...
+	template<typename T> // non-memeber swap
+	void swap(Widget<T> &a, Widget<T> &b) 
+	{
+		// does not belong in the std namespace
+		a.swap(b);
+	}
+
+
+
+Swap implementation:
+
+	namespace std
+	{
+		template<typename T>
+		void swap(T& a, T& b)
+		{
+			T temp(a);
+			a = b;
+			b = temp;
+		}
+	}
+
+Summarization:
+- Provide a swap member function when std::swap would be inefficient for your type. Make sure your swap doesn't throw exceptions
+- If you offer a member swap, also offer a non-member swap that calls the member. For classes(not templates), specialize std::swap, too.
+- When calling swap, emply a using declaration for std::swap, then call swap without namespace qualification.
+- It's fine to totally specialize std templates for user-defined types, but never try to add something completly new to std
