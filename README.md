@@ -645,3 +645,165 @@ Summarization:
 - If you offer a member swap, also offer a non-member swap that calls the member. For classes(not templates), specialize std::swap, too.
 - When calling swap, emply a using declaration for std::swap, then call swap without namespace qualification.
 - It's fine to totally specialize std templates for user-defined types, but never try to add something completly new to std
+
+# 26. Postpone variable definitions as long as possible
+
+The main purpose is to prevent variables from not being used after they are defined, which affects efficiency. They should be defined when they are used, and initialized by default constructers instead of trough assignment.
+
+# 27. Minimize casting
+
+There are 6 ways of casting
+- C-style casts
+	(T) expression
+- Function-style casts
+	T(expression)
+- const_cast is typically used to cast away the constness of objects. It is the only C++-style cast that can do this.
+	const_cast<T>(expression)
+- dynamic_cast is primarily used to perform "safe downcasting" i.e. to determine wheter an object is of a particular type in an inhgeritance hierarchy. It is the only cast that can't be performed using the old-style syntax . It's also the only cast that may havea significant runtime cost.
+	dynamic_cast<T>(expression)
+- reinterpret_cast is intended for low-level casts that yield implementation-dependent results, e.g. casting a pointer to an int. Such casts should be rare outside low-level code.
+	reinterpret_cast<T>(expression)
+- static_cast can be used to force implicit conversion(e.g. non-const object to const object, int to double, etc.). It can also be used to perform the reverse of many such conversions
+	static_cast<T>(expression)
+
+Try to not to perform casts, because:
+- 1. Switching from int to doubnle is prone to precision errors
+- 2. Converting a class to its parent class is also prone to
+
+Summarization:
+- Try to avoid casts, especially dynamic_cast in efficiency-consious ccode, and try to use alternative desiugns that don't require casts
+- If the transformation is necessary, try to encapsulate it behind a function and let the client call the function without the need to cast in their own code
+- If you need to convert, use modern-style C++-casts which are much better than C-style casts
+
+# 28. Avoid returning "handles" to object internals
+
+To prevent the user from misperating the returned value you should avoid returning handles to object internals
+
+	// old code
+	class Rectangle
+	{
+	public:
+		Point& upperLeft() const { return pData->ulhc; }
+		Point& lowerRight() const { return pData->lrhc; }
+	};
+
+	// new code
+	class Rectangle
+	{
+	public:
+		const Point& upperLeft() const { return pData->ulhc; }
+		const Point& lowerRight() const { return pData->lrhc; }
+	};
+	// But there could potentionally be still dangling variables
+	const Point* pUpperLeft = &(boundingBox(*pgo).upperLeft());
+
+boundingBox will return a new, temporary Ractangle object for temp. After this entire statement is executed, temp becomes empty and becomes a dangling variable
+
+Summarization:
+- Try not to return pointers, references, etc. to private variables
+- If you really want to use it,m try to use const to limit it, and try to avoid the possiblitly of suspension
+
+# 29. Strive for exception-safe code 
+
+Exception-safe functions have one of three characteristics:
+- If an exception is thrown, everything within the program remains in a valid state, no objects or data structures are corrupted. Do not leak resources under any circumstances, and do not allow daya destruction under any circumstances.
+- If an exception is thrown, the state of the program is not changed, and the program returns to the state before the function was called.
+- promise to never throw exceptions
+
+	class PrettyMenu
+	{
+	public:
+		void changeBackground(std::ifstream& imgSrc); // change background image
+	private:
+		Mutex mutex; // Mutex
+	};
+	// old code
+	void changeBackground(std::ifstream& imgSrc)
+	{
+		lock(&mutex);
+		++changes;
+		bgImage = new Image(imgSrc);
+		unlock(&mutex);
+	}
+	/*	This Code has many problems, first it leaks resources and when an exception occurs in new Image(imgSrc), the call
+		to unlock the mutex will never be executed and the mutex will be hed forever. Data curruption should be prvented, 
+		If an exception occuyrs in tnew Image(imgSrc), bgImage is empty and changes has already been incremented.	
+	*/
+
+	// new code
+	void PrettyMenu::changeBackground(std::ifstream& imgSrc
+	{
+		using std::swap;
+		Lock ml(&mutex);
+		std::shared_ptr<PMImpl> pNe(new PMImpl(*pImpl));
+		pNew->bgImage.reset(new Image(imgSrc));
+		++pNew->imageChanges;
+		swap(pImpl, pNew);
+	}
+
+Summarization:
+- Exception-safe functions leak no resources and allow no data structures to become corrupted, even when exceptions are thrown. Such functions offer the basic, strong, or nothrow gurantees.
+- The strong guarantee can often be implemented via copy-and-swap, but the strong guarentee is not practical for all functions.
+- A function can usually offer a guarantee no stronger than the weakes guarentee of the functions it calls.
+
+# 30. Understand the ins and outs of inlining.
+
+Excessive use of inline functions will increase the size of the program and cause high memory usage
+
+The compiler can refuse to inline a function, and if the compiler does not know which function to call, it will report a warining
+
+Try not to set the template or constructor as inline, because template inline may generate corresponding functions for each template, which will make the code too bloated. For the same reason, the constructor will also generate a lot of code in the actual process.
+
+	class Derived : public Base
+	{
+	public:
+		Derived(){} // it looks like an empty constructor but looks can mislead
+	}
+	
+	Derived::Dervied
+	{
+		// line exception handling code
+	}
+
+# 31. Minimize compilation dependencies between files.
+
+This relationship refers to the fact that one file contains the class definition of another file.
+
+So to achieved decoupling, you define the implementation in another class
+
+	// old code
+	class Person
+	{
+	private:
+		Dates date;
+		Adresses adress;
+	}
+
+	// new code decoupling is achieved by seperating the implementation and the interface
+	class PersonImpl;
+	class Person
+	{
+	private:
+		std::shared_ptr<PersonImpl> pImpl;
+	}
+
+Similiar interface classes can also use fully virtual functions
+
+	class Person
+	{
+	public:
+		virtual ~Person();
+		virtual std::string name() const = 0;
+		virtual std::string birthDate() const = 0;
+	}
+
+Then implement the relevant methods through the inheriting subclass
+
+In this case these virtual functions are usually called factory functios
+
+Summarization:
+- The file should be made dependent on the declaration and not on the definiton, which can achieved by the two methods above
+- Library header files should exist in full and declaration-only forms. This applies regardless of whether templates are involved
+
+# 32. Make sure public inheritance models "is-a"
+
