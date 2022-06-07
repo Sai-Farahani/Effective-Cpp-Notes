@@ -861,3 +861,16 @@ Summarization:
 
 # 34. Differentiate between inheritance of interface and inheritance of implmentation
 
+Pure virtual functions provide an interface inheritance. When a function is purely virtual, it means that all implementations are implemted in subclasses
+
+	class Shape
+	{
+		virtual void draw() const = 0;
+	};
+
+	ps->Shape::draw();
+
+Summarization:
+- Inheritance of interface is different from inheritance of implementation. Under public inheritance derived classes always inherit base class interfaces
+- Pure virtual functions specify inheritance of interface only.
+- Simple (impure) virtual functions specify inheritance of interface plus inheritance of a default implementation.
