@@ -807,3 +807,57 @@ Summarization:
 
 # 32. Make sure public inheritance models "is-a"
 
+Public class inheritance refers to "is a"
+
+	class Student : public Persone {...};
+
+A student is a person, but a person is not necessarily a student
+
+A common mistake here is to implement functions that may not exit in the parent class such as:
+
+	class Bird
+	{
+		virtual void fly();
+	}
+
+	class Penguin : public Bird {...}; // Penguins can't fly
+
+It is necessary to eliminate suchg error by design, for example, by defining a FlyBird
+
+Summarization:
+- When it comes to public inheritance, every Base class attribute must apply to its derived class
+
+# 33. Avoid hiding inherited names
+
+	class Base
+	{
+	public: 
+		virtual void mf1() = 0;
+		virtual void mf1(int);
+		virtual void mf2();
+		void mf3();
+		void mf3(double);
+	};
+
+	class Derived : public Base
+	{
+	public:
+		virtual void mf1(); 
+		void mf3();
+	};
+
+This problem can be solves by doing this:
+
+	using Base::mf1;
+	// or
+	virtual void mf1()
+	{
+		Base::mf1(); // forward function
+	}
+
+Summarization:
+- Be mindful of the cope of functions/variables in derived classes
+- You can solve problems like this by forwarding the functions
+
+# 34. Differentiate between inheritance of interface and inheritance of implmentation
+
