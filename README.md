@@ -874,3 +874,115 @@ Summarization:
 - Inheritance of interface is different from inheritance of implementation. Under public inheritance derived classes always inherit base class interfaces
 - Pure virtual functions specify inheritance of interface only.
 - Simple (impure) virtual functions specify inheritance of interface plus inheritance of a default implementation.
+
+# 35. Consider alternatives to virtual functions
+
+NVM method: indirectly call private virtual function through public non-virtual member function, the so-called template method design pattern:
+
+	class GameCharacter
+	{
+	public:
+		int healthValue() const
+		{
+			// do "before" stuff
+			int retVal = doHealthValue(); // do the real work
+			// do "after" stuff
+		}
+	private:
+		virtual int doHealthValue() const {...} // default algorithm calculating healthfunc
+	}
+
+The advantaghe of this approach is the "before" and "after" statements, that ensure that the virtual function is called separately before and after the actual work
+
+But there are also other methods like e.g. the Strategy design pattern
+
+	class GameCharacter;
+	int defaultHealthCalc(const GameCharacter& gc);
+	class GameCharacter
+	{
+	public:
+		typedef int (*HealthCalcFunc)(const GameCharacters&); // function pointer
+		explicit GameCharacter(HealthCalcFunc hfc = defaultHealthCalc) : healthFunc(hcf) {}
+		int healthValue() const { return healthFunc(*this); }
+	private:
+		HealthCalcFunc healthFunc;
+	}
+
+	// you should strive to use a function object instead of a function pointer
+
+	typedef std::function<int (const GameCharacter&)> HealthCalcFunc; // typedef that behaves more like a function pointer
+
+Summarization:
+- Alternatives to virtual functions include the NVM idiom and various forms of the Strategy design patter. The NVM idiom is itself an example of the Template Method design pattern.
+- A disadvantage of moving functionality from a member function to a function outside the class is that the non-member function lacks access to the class's non-public members
+- std::function objects act like generalized function pointers. Such objects support all callable entities compatible with a given target signature.
+
+# 36. Never redefine an inherited non-virtual function
+
+	class B
+	{
+	public:
+		void mf();
+	};
+
+	class D : public B
+	{
+	public:
+		void mf();
+	};
+
+	D x;
+	B* pB = &x;
+	D *pD = &x;
+
+	pB->mf(); // calls the B version
+	pD->mf(); // calls the D version
+
+Even ignoring this code difference, if it were redefined in this way, it would not meet the previous definiton of "every D is a B"
+
+Summarization:
+- Never redefine an inherited non-virtual function
+
+# 37. Never redfine a function's inherited default parameter value
+
+	class Shape
+	{
+	public:
+		enum ShapeColor { Red, Green, Blue };
+		virtual void draw(ShapeColor color = Red) const = 0;
+	};
+	
+	class Rectangle : public Shape
+	{
+	public:
+		virtual void draw(ShapeColor color = Green) const; // Different default parameters as the parent class
+	}
+
+	Shape *pr = new Rectangle; // static type of pr is Shape, but the dynamic type is Rectangle
+	pr->draw(); // The virtual function is dyunamically bound and the default parameter value is statically bound, so Red will be called
+
+Summarization:
+- Never redefine an inherited default parameter value, because default parameter values are statically bound, while virtual functions, (the only functions you should overriding) are dynamically bound.
+
+# 38. Model "has-a" or "is-implemented-in-terms-of" through composition
+
+A composition is the relationship between types that arise when objects of one type contain objects of another type.
+
+	template<class T>
+	class Set
+	{
+	public:
+		void insert();
+		// etc. 
+	private:
+		std::list<T> rep;
+	};
+
+Set is not a list, but has a list
+
+Summarization:
+- Composition has meanings completly different from that of public inheritance
+- In the application domain, composition means has-a. In the implementation domain, it means is-implemted-in-terms-of.
+
+# 39. Use private inheritance judicously
+
