@@ -986,3 +986,10 @@ Summarization:
 
 # 39. Use private inheritance judicously
 
+Private inheritance is not an is-a relationship, i.g. some privatre members of the parent class are inaccessible to subclasses, and after private inheritance, all members of the subclass are private, which mean it's is-implemented-in-terms-of. Most of the time you should use composition instead of private inheritance.
+
+Summarization:
+- Privatye inheritance means is-implemented-in-terms-of. It's usually inferior to composition, but makes sense when a derived class needs access to protected base class members or needs to redefine inherited virtual functions.
+- Unlike compositon, private inheritance can enable the empty base opimization. This can be importnat for library developers who strive to minimize object sizes.
+
+# 40. Use multiple inheritances judiciously
