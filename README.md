@@ -956,7 +956,7 @@ Summarization:
 	{
 	public:
 		virtual void draw(ShapeColor color = Green) const; // Different default parameters as the parent class
-	}
+	};
 
 	Shape *pr = new Rectangle; // static type of pr is Shape, but the dynamic type is Rectangle
 	pr->draw(); // The virtual function is dyunamically bound and the default parameter value is statically bound, so Red will be called
@@ -993,3 +993,35 @@ Summarization:
 - Unlike compositon, private inheritance can enable the empty base opimization. This can be importnat for library developers who strive to minimize object sizes.
 
 # 40. Use multiple inheritances judiciously
+
+Multiple inheritance can easily case name conficts
+
+	class BorrowableItem
+	{
+	public:
+		void checkOut();
+	};
+
+	class ElectronigGadget
+	{
+	private:
+		bool checkOut() const;
+	};
+
+	class MP3Plazer : public BorrowableItem, public ElectronicGadget { ... };
+	MP3Player mp;
+	mp.checkOut(); // ambiguious the compiler doesn't know which function to call even if one function is private
+	// fixable tho
+	mp.BorrowableItem::checkOut();
+
+In practical applications, two classes often inherit from the same parent class, and then one class inherits these two classes
+
+	class Parent { ... };
+	class First : public Parent { ... };
+	class Second : public Parent { ... };
+	class last : public First, public Second { ... };
+
+Summarization:
+-  Multiple inheritance is more complex than single inheritance. It can lead to new ambiguity issues and to the need for virtual inheritance.
+- Virtual inheritance imposes costs in size, speed and complexity of initialization and assignment. It's most practical when virtual base classes have no data.
+- Multiple inhertance does have legitimate uses, One scenario involves combing public inheritance from an Interface class with private inheritance from a class that helps with implementation
