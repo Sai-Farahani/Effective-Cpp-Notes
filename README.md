@@ -1025,3 +1025,43 @@ Summarization:
 -  Multiple inheritance is more complex than single inheritance. It can lead to new ambiguity issues and to the need for virtual inheritance.
 - Virtual inheritance imposes costs in size, speed and complexity of initialization and assignment. It's most practical when virtual base classes have no data.
 - Multiple inhertance does have legitimate uses, One scenario involves combing public inheritance from an Interface class with private inheritance from a class that helps with implementation
+
+# 41. Understand implicit interfaces and compile-time polymorphism
+
+Solve problems with explicit interfaces and runtime polymorphism:
+
+	class Widget
+	{
+	public:
+		Widget();
+		virtual ~Widget();
+		virtual std::size_t() const;
+		void swap(Widget& other);
+	};
+
+	void doProcessing(Widget& w)
+	{
+		if (w.size() > 10) { ... }
+	}
+
+Since w is declared as an Widget, w must support the Widget interface, and we can find out what this interface looks like in the source code (explicit interface), which means the code is cleary visible in the source code
+
+Since some member functions of Widget are virtual, the calls of w to those functions will show run-time polymorphism, i.e. which function to call during runtime is determined according to the dynamic type of w. 
+
+When it comes to template programming, Implicit interface and compile-time polymorphism are more important:
+
+	template<typename T>
+	void doProcessing(T& w)
+	{
+		if (w.size() > 10) { ... }
+	}
+
+Which interface w must support is determnined by the operations performed on w, in the template. For example, T must support functions such as size. This is called an implicit interface.
+
+Any function call involving w, such as operator>, may cause the template to be instantiated, making the call successful, and different functions are instantiated according to different T calls, which is called compile-time-polymorphism
+
+Summarization:
+- Both classes and templates support interface and polymorphism.
+- For classes, interfaces are explicit and centered on function signatures, Polymorphism occurs at runtime through virtual functions.
+- For template parameters, interfaces are implicit aand based on valid expressions. Polymorphism occurs during compilation through template instanitation and function overloading resolution.
+
