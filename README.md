@@ -52,7 +52,6 @@ Instead of using function like macros, you should use inline functions instead e
 	}
 
 Summarization:
-
 - It is better to replace #define with consts and enums for simple constants
 - It is better to replace function-like macros with inline functions
 
@@ -1065,3 +1064,19 @@ Summarization:
 - For classes, interfaces are explicit and centered on function signatures, Polymorphism occurs at runtime through virtual functions.
 - For template parameters, interfaces are implicit aand based on valid expressions. Polymorphism occurs during compilation through template instanitation and function overloading resolution.
 
+# 42. Understand the two meanings of typename
+
+	template <typename C>
+	void print2nd(const C& container)
+	{
+		if (container.size() >= 2)
+		{
+			typename C::const_iterator iter(container.begin());
+		}
+	}
+
+The typename there means that C::const_iterator is a typename, because there may be not be a const_iterator in the C type or that there is a variable named const_iterator in type C
+
+Summarization:
+- When declaring template parameters, class and typename are interchangable.
+- Use typename to identify nested dependednt type names, except in base class list or as a base class identifier in a member initilization list.
