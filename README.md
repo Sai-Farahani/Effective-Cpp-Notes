@@ -1080,3 +1080,95 @@ The typename there means that C::const_iterator is a typename, because there may
 Summarization:
 - When declaring template parameters, class and typename are interchangable.
 - Use typename to identify nested dependednt type names, except in base class list or as a base class identifier in a member initilization list.
+
+# 43. Know how to access names in templatized base classes
+
+	// old code
+	class CompanyA
+	{
+	public:
+		void sendCleartext(const std::string& msg);
+		// ...
+	};
+
+	class CompanyB { ... };
+
+	template <typename Company>
+	class MsgSender
+	{
+	public:
+		void sendClear(const MsgInfo& info)
+		{
+			std::string msg;
+			Company c;
+			c.sendCleartext(msg);
+		}
+	};
+
+	template <typename Company>
+	class LoggingMsgSender : public MsgSender<Company> // for logging the msg wehn sending it
+	{
+	public:
+		void sendClearMsg(const MsgInfo& info)
+		{
+			// log
+			sendClear(info); // failes to compile because the compiler couldn't find a specialised MsgSender<company>
+			// log
+		}
+	};
+
+Workaround 1:
+
+	template <> // generate a fully specialized template
+	class MsgSender<companyZ>
+	{
+	public:
+		void sendEcnrypted(const MsgInfo& info) { ... };
+	};
+
+Workaround 2:
+
+	template <typename Company>
+	class LoggingMsgSender : public MsgSender<Company>
+	{
+	public:
+		void sencClearMsg(const MsgInfo& info)
+		{
+			// log
+			this->sencClear(info); // supposing that sencClear will be inherited
+			// log
+		}
+	};
+
+Workaround 3:
+
+	template <typename Company>
+	class LoggingMsgSender : public MsgSender<Company>
+	{
+	public:
+		using MsgSender<Company>::sendClear; // telling the compiler that it can assume that sendClear is going to be inside the base class
+
+		void sendClearMsg(const MsgInfo& info)
+		{
+			// log
+			sencClear(info); // supposing that sencClear will be inherited
+			// log
+		}
+	};
+
+Workaround 4:
+
+	template <typename Company>
+	class LoggingMsgSender : public MsgSender<Company>
+	{
+	public:
+		void sencClearMsg(const MsgInfo& info)
+		{
+			MsgSender<Company>::sendClear(info);
+		}
+	};
+
+Summarization:
+- In derived class templates, refer to names in base class templates via a "this->" prefix, via using declarations, or via an explicit base class qualification.
+
+# 44. Factor parameter-independent ocde out of templates
