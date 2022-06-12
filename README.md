@@ -1256,3 +1256,28 @@ Summarization:
 
 # 46. Define non-memeber functions inside templates when type conversions are desired
 
+When we perform mixed-type arithmetic operations, there will be cases where the compilation fails
+
+	template <typename T>
+	const Rational<T> operator* (const Rational<T>& lhs, const Rational<T>& rhs) { ... };
+
+	Rational<int> oneHalf(1, 2);
+	Rational<int> result = oneHalf * 2;
+
+To fix this problem you can just declare a friend function and make a mixed call
+
+	template <typename T>
+	class Rational
+	{
+	public:
+		friend const Rational operator* (const Rational& lhs, const Rational& rhs)
+		{
+			return Rational(lhs.numerator() * rhs.numerator(), lhs.denominator() * rhs.denominator());
+		}
+	};
+
+	template <typename T>
+	const Rational<T> operator* (const Rational<T>& lhs, const Rational<T>& rhs) { ... }
+
+Summarization:
+- When writing a clas template that offers functions related tot the template that support implicit type conversions on all parameters, define those functions as friends inside the class template.
