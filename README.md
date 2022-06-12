@@ -566,7 +566,7 @@ The usage of namespaces is also mentioned here. Namespaces can be used to devide
 		// all bookmark related convenvience functions
 	};
 
-# 24. Declare non-member functions when type conversion should apply to all parameters
+### 24. Declare non-member functions when type conversion should apply to all parameters
 
 If you want to multiply an int type varibale with a Rational variable and it's a member function, when an implicit conversion occurs, an error occurs because there is no type conversion from int to Rational
 
@@ -586,7 +586,7 @@ If you want to multiply an int type varibale with a Rational variable and it's a
 Summarization:
 - If you need type conversions on all parameters to a function(including the one pointed to by the this pointer), the function must be a non-memeber
 
-# 25. Consider support for a non-throwing swap
+### 25. Consider support for a non-throwing swap
 
 It is difficult to write a swap that is effcient, less prone to misunderstandings, and has consistency.
 
@@ -645,11 +645,11 @@ Summarization:
 - When calling swap, emply a using declaration for std::swap, then call swap without namespace qualification.
 - It's fine to totally specialize std templates for user-defined types, but never try to add something completly new to std
 
-# 26. Postpone variable definitions as long as possible
+### 26. Postpone variable definitions as long as possible
 
 The main purpose is to prevent variables from not being used after they are defined, which affects efficiency. They should be defined when they are used, and initialized by default constructers instead of trough assignment.
 
-# 27. Minimize casting
+### 27. Minimize casting
 
 There are 6 ways of casting
 - C-style casts
@@ -674,7 +674,7 @@ Summarization:
 - If the transformation is necessary, try to encapsulate it behind a function and let the client call the function without the need to cast in their own code
 - If you need to convert, use modern-style C++-casts which are much better than C-style casts
 
-# 28. Avoid returning "handles" to object internals
+### 28. Avoid returning "handles" to object internals
 
 To prevent the user from misperating the returned value you should avoid returning handles to object internals
 
@@ -702,7 +702,7 @@ Summarization:
 - Try not to return pointers, references, etc. to private variables
 - If you really want to use it,m try to use const to limit it, and try to avoid the possiblitly of suspension
 
-# 29. Strive for exception-safe code 
+### 29. Strive for exception-safe code 
 
 Exception-safe functions have one of three characteristics:
 - If an exception is thrown, everything within the program remains in a valid state, no objects or data structures are corrupted. Do not leak resources under any circumstances, and do not allow daya destruction under any circumstances.
@@ -745,7 +745,7 @@ Summarization:
 - The strong guarantee can often be implemented via copy-and-swap, but the strong guarentee is not practical for all functions.
 - A function can usually offer a guarantee no stronger than the weakes guarentee of the functions it calls.
 
-# 30. Understand the ins and outs of inlining.
+### 30. Understand the ins and outs of inlining.
 
 Excessive use of inline functions will increase the size of the program and cause high memory usage
 
@@ -764,7 +764,7 @@ Try not to set the template or constructor as inline, because template inline ma
 		// line exception handling code
 	}
 
-# 31. Minimize compilation dependencies between files.
+### 31. Minimize compilation dependencies between files.
 
 This relationship refers to the fact that one file contains the class definition of another file.
 
@@ -804,7 +804,7 @@ Summarization:
 - The file should be made dependent on the declaration and not on the definiton, which can achieved by the two methods above
 - Library header files should exist in full and declaration-only forms. This applies regardless of whether templates are involved
 
-# 32. Make sure public inheritance models "is-a"
+### 32. Make sure public inheritance models "is-a"
 
 Public class inheritance refers to "is a"
 
@@ -826,7 +826,7 @@ It is necessary to eliminate suchg error by design, for example, by defining a F
 Summarization:
 - When it comes to public inheritance, every Base class attribute must apply to its derived class
 
-# 33. Avoid hiding inherited names
+### 33. Avoid hiding inherited names
 
 	class Base
 	{
@@ -858,7 +858,7 @@ Summarization:
 - Be mindful of the cope of functions/variables in derived classes
 - You can solve problems like this by forwarding the functions
 
-# 34. Differentiate between inheritance of interface and inheritance of implmentation
+### 34. Differentiate between inheritance of interface and inheritance of implmentation
 
 Pure virtual functions provide an interface inheritance. When a function is purely virtual, it means that all implementations are implemted in subclasses
 
@@ -874,7 +874,7 @@ Summarization:
 - Pure virtual functions specify inheritance of interface only.
 - Simple (impure) virtual functions specify inheritance of interface plus inheritance of a default implementation.
 
-# 35. Consider alternatives to virtual functions
+### 35. Consider alternatives to virtual functions
 
 NVM method: indirectly call private virtual function through public non-virtual member function, the so-called template method design pattern:
 
@@ -916,7 +916,7 @@ Summarization:
 - A disadvantage of moving functionality from a member function to a function outside the class is that the non-member function lacks access to the class's non-public members
 - std::function objects act like generalized function pointers. Such objects support all callable entities compatible with a given target signature.
 
-# 36. Never redefine an inherited non-virtual function
+### 36. Never redefine an inherited non-virtual function
 
 	class B
 	{
@@ -942,7 +942,7 @@ Even ignoring this code difference, if it were redefined in this way, it would n
 Summarization:
 - Never redefine an inherited non-virtual function
 
-# 37. Never redfine a function's inherited default parameter value
+### 37. Never redfine a function's inherited default parameter value
 
 	class Shape
 	{
@@ -963,7 +963,7 @@ Summarization:
 Summarization:
 - Never redefine an inherited default parameter value, because default parameter values are statically bound, while virtual functions, (the only functions you should overriding) are dynamically bound.
 
-# 38. Model "has-a" or "is-implemented-in-terms-of" through composition
+### 38. Model "has-a" or "is-implemented-in-terms-of" through composition
 
 A composition is the relationship between types that arise when objects of one type contain objects of another type.
 
@@ -983,7 +983,7 @@ Summarization:
 - Composition has meanings completly different from that of public inheritance
 - In the application domain, composition means has-a. In the implementation domain, it means is-implemted-in-terms-of.
 
-# 39. Use private inheritance judicously
+### 39. Use private inheritance judicously
 
 Private inheritance is not an is-a relationship, i.g. some privatre members of the parent class are inaccessible to subclasses, and after private inheritance, all members of the subclass are private, which mean it's is-implemented-in-terms-of. Most of the time you should use composition instead of private inheritance.
 
@@ -991,7 +991,7 @@ Summarization:
 - Privatye inheritance means is-implemented-in-terms-of. It's usually inferior to composition, but makes sense when a derived class needs access to protected base class members or needs to redefine inherited virtual functions.
 - Unlike compositon, private inheritance can enable the empty base opimization. This can be importnat for library developers who strive to minimize object sizes.
 
-# 40. Use multiple inheritances judiciously
+### 40. Use multiple inheritances judiciously
 
 Multiple inheritance can easily case name conficts
 
@@ -1025,7 +1025,7 @@ Summarization:
 - Virtual inheritance imposes costs in size, speed and complexity of initialization and assignment. It's most practical when virtual base classes have no data.
 - Multiple inhertance does have legitimate uses, One scenario involves combing public inheritance from an Interface class with private inheritance from a class that helps with implementation
 
-# 41. Understand implicit interfaces and compile-time polymorphism
+### 41. Understand implicit interfaces and compile-time polymorphism
 
 Solve problems with explicit interfaces and runtime polymorphism:
 
@@ -1064,7 +1064,7 @@ Summarization:
 - For classes, interfaces are explicit and centered on function signatures, Polymorphism occurs at runtime through virtual functions.
 - For template parameters, interfaces are implicit aand based on valid expressions. Polymorphism occurs during compilation through template instanitation and function overloading resolution.
 
-# 42. Understand the two meanings of typename
+### 42. Understand the two meanings of typename
 
 	template <typename C>
 	void print2nd(const C& container)
@@ -1081,7 +1081,7 @@ Summarization:
 - When declaring template parameters, class and typename are interchangable.
 - Use typename to identify nested dependednt type names, except in base class list or as a base class identifier in a member initilization list.
 
-# 43. Know how to access names in templatized base classes
+### 43. Know how to access names in templatized base classes
 
 	// old code
 	class CompanyA
@@ -1171,7 +1171,7 @@ Workaround 4:
 Summarization:
 - In derived class templates, refer to names in base class templates via a "this->" prefix, via using declarations, or via an explicit base class qualification.
 
-# 44. Factor parameter-independent ocde out of templates
+### 44. Factor parameter-independent ocde out of templates
 
 To not make the compiler compile long and bloated binary code, you should extract the parameters.
 
@@ -1219,7 +1219,7 @@ Summarization:
 - Bloat due to non-type template parameters can often be eliminated by replacing template parameters with function parameters or class data members.
 - Bloat due to type parameters can be reduced by sharing implementations for instiantiation types with identical binary representations.
 
-# 45. Use member function templates to accept "all compatible types"
+### 45. Use member function templates to accept "all compatible types"
 
 	Top* pt2 = new Bottom; // Converting Bottom to Top is simple
 	template <typename T>
@@ -1254,7 +1254,7 @@ Summarization:
 - Use member function templates to generate functions that accept all compatible types.
 - If you declare member templates for generalized copy construction or generalized assignment, you'll still need to declare the normal copy contructor and copy assignment operator, too.
 
-# 46. Define non-memeber functions inside templates when type conversions are desired
+### 46. Define non-memeber functions inside templates when type conversions are desired
 
 When we perform mixed-type arithmetic operations, there will be cases where the compilation fails
 
@@ -1282,7 +1282,7 @@ To fix this problem you can just declare a friend function and make a mixed call
 Summarization:
 - When writing a clas template that offers functions related tot the template that support implicit type conversions on all parameters, define those functions as friends inside the class template.
 
-# 47. Use traits classes for information about types
+### 47. Use traits classes for information about types
 
 Traits are a techique that allows you to obtain certain types of information at compile time, or a protocol. One of the requirements of this technique is that it must behave the same for built-in types and user-defined types.
 
@@ -1353,7 +1353,7 @@ Summarization:
 - Traits classes make information about types available during compilation. They're implemented using templates and template specializations.
 - In conjunction with overloading, traits classes make it possible to perform compile-time if...else tests on types.
 
-# 48. Be aware of template metaprogramming
+### 48. Be aware of template metaprogramming
 
 Writing programs that are executed during compilation is metaprogramming. Because these codes run in the compiler instead at runtime, the efficiency will be very high and some problems that are easy to occur during runtime are also exposed.
 
@@ -1376,7 +1376,7 @@ Summarization:
 - Template metaprogramming can shift work from runtime to compile-time, thus enabling earlier error detection and higher runtime performance.
 - TMV can be used to generate custom code based on combinations of policy choices, and it can also be used to avoid generating code inappropriate for particular types.
 
-# 49. Understand the behavior of the new-handler
+### 49. Understand the behavior of the new-handler
 
 When new can't allocate new memory, it will keep callingthe new-handler until enough memory is found, new_handl;er is an error handling function:
 
@@ -1405,7 +1405,7 @@ Summarization:
 - set_new_handler allows clients to specify a function to be called when a memory allocation can't be satisfied
 - Nothrow new is of limited utility , because it applies only to memory allocation; subsequent constructor calls may still throw exceptions.
 
-# 50. Understand when it makes sense to teplcae new and delete
+### 50. Understand when it makes sense to teplcae new and delete
 
 - It is used to detect errors in use. If the new memory fails tyo delte, it will cause memory leaks. When customizing, it can detect and locate the corrsponding failure location.
 - In order to strengthen efficiency(traditional new is made to meet varous needs, so the efficiency is very moderate)
@@ -1418,7 +1418,7 @@ Summarization:
 Summarization:
 - There are many valid reasons for writing custom versions of new and delete, including improving performance, debugging heap usage erros, and collecting heap usage information.
 
-# 51. Adhere to convention when writing new and delete
+### 51. Adhere to convention when writing new and delete
 
 When rewiring new, it is necessary to ensure conditions, and to be able to handle all unexpected situations such as the 0-bytes memory application
 
@@ -1428,7 +1428,7 @@ Summarization:
 - operator new should contain an infinite loop tring to allocate memory, should call the new handler if it can't satistya memory request, and should handle requests for zero bytes. Clas specific versions should handle requests for larger blocks than expected.
 - operator delete should do nothing if passed by a pointer that is null. Class-specific versions should handle blocks that are larger than expected
 
-# 52. Write placement delete if you write placement new
+### 52. Write placement delete if you write placement new
 
 If the parameters accepted by operator new have other parameters besides the certain size_t, this is the so-called place,emt new
 
@@ -1439,13 +1439,13 @@ Summarization:
 - When you write a placement version of operator new, be sure to write the corresponmding placement version of operator delete. If you don't your program may experience subtle, intermittent memory leaks.
 - When you delcare placement versions of new and delete, be sure not to unintentionally hide the normal versions of those functions
 
-# 53. Pay attention to compiler warnings
+### 53. Pay attention to compiler warnings
 
 Take warnings issued by the compiler serously, and strive to have no warnings at the highest warning level of the compiler
 
 At the same time, don't rely too much on the compiler's warnings, because different compilers may have diffeernet attitudes towards things, and there may be no warnings if you change a compiler.
 
-# 54. Familiarize yourself with the standard library including TR1
+### 54. Familiarize yourself with the standard library including TR1
 
 This one is outdates, but it's still (kinda) useful to know
 
@@ -1466,7 +1466,7 @@ Summarization:
 - TR1 adds support for smart pointers, generalized function poiinters, hash-based cntainers, regular expressions, and 10 other components
 - TR1 itself is only a specification. To take advantage of TR1, you need an implementation. One source for implementations of TR1 components in Boost.
 
-# 55. Familiarize yourself with Boost.
+### 55. Familiarize yourself with Boost.
 
 - Boost is a community and web site for the development of free, open source, peer-reviewed C++ libraries. Boost plays an influential role in C++ standardization.
 - Boost offers implementations of many TR1 components, but it also offers many other libraries, too
