@@ -70,7 +70,7 @@ If the return value of a function is set to const, or the return pointer is set 
 		}
 	private:
 		char *pText;
-	}
+	};
 
 	const CTextBlock ccbt("Hello");
 	char *cp = &cctb[0];
@@ -1172,3 +1172,49 @@ Summarization:
 - In derived class templates, refer to names in base class templates via a "this->" prefix, via using declarations, or via an explicit base class qualification.
 
 # 44. Factor parameter-independent ocde out of templates
+
+To not make the compiler compile long and bloated binary code, you should extract the parameters.
+
+	template <typename T, std::size_t n>
+	class SquareMatrix
+	{
+	public:
+		void invert(); // invert the matrix
+	};
+
+	SquareMatrix<double, 5> sm1;
+	SquareMatrix<double, 10> sm2;
+	sm1.invert();
+	sm2.invert(); // will have two inverts that are basically indentical
+
+	// new code
+	template <typename T>
+	class SquareMatrix : private SquareMatrixBase<T>
+	{
+	private:
+		using SquareMatrixBase<T>::invert; // avoids shadowing the base version of invert
+	public:
+		void invert()
+		{
+			this->invert(n); // An inline call that calls the base class version of invert
+		}
+	};
+
+Because the matrix data may be different, e.g. the it's a 5x5 or 10x10 matrix, the input matrix data will also be different. It is better to use a pointer to point to the matrix data.
+
+	template <typename T, std::size_t n>
+	class SqureMatrix : private SquareMatrixBase<T>
+	{
+	public:
+		SquareMatrix::SquareMatrix<T>(n, 0), pData(new T[n*n])
+		{
+			this->setDataPtr(pData.get());
+		}
+	private:
+		boost::scoped_array<T> pData; // exists in heap
+	};
+
+Summarization:
+- Templates generate multiple classes and multiple functions, so any template code not dependent on a template parameter causes bloat.
+- Bloat due to non-type template parameters can often be eliminated by replacing template parameters with function parameters or class data members.
+- Bloat due to type parameters can be reduced by sharing implementations for instiantiation types with identical binary representations.
