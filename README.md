@@ -1268,7 +1268,7 @@ To fix this problem you can just declare a friend function and make a mixed call
 
 	template <typename T>
 	class Rational
-	{
+	{6
 	public:
 		friend const Rational operator* (const Rational& lhs, const Rational& rhs)
 		{
@@ -1281,3 +1281,76 @@ To fix this problem you can just declare a friend function and make a mixed call
 
 Summarization:
 - When writing a clas template that offers functions related tot the template that support implicit type conversions on all parameters, define those functions as friends inside the class template.
+
+# 47. Use traits classes for information about types
+
+Traits are a techique that allows you to obtain certain types of information at compile time, or a protocol. One of the requirements of this technique is that it must behave the same for built-in types and user-defined types.
+
+	template <typename T>
+	struct iterator_traits; // information about iterator classification
+	// The way iterator_traits works is that for a certain type IterT, it must be declared in struct iterator_traits<IterT> a typedef named iterator_category. This typedef is used to confirm the iterator classification of IterT. And a class designed for deque could look like this:
+
+	template <...>
+	class deque
+	{
+	public:
+		class iterator
+		{
+		public:
+			typedef random_access_iterator_tag iterator_category;
+		}
+	};
+
+	// For user-defined iterator_traits, there is a IterT, which says what it means by itself
+	template <typename IterT>
+	struct iterator_traits
+	{
+		typedef typename IterT::iterator_category iterator_category;
+	}
+
+	// The iterator type specified by iterator_traits for pointer are:
+	template <typename IterT>
+	struc iterator_traits?<IterT*>
+	{
+		typedef random_access_iterator_tag iterator_category;
+	}
+
+Here's how to design and implement a traits-class:
+- Confirm some type_related information that you want to be available in the future, e.g. for iterators we want to have their classification available in the future.
+- Choose a name for this information (e.g. iterator_category)
+- Provide a template and a set of specializations (such as iterator_traits) containing information about the types you want to support
+
+After designing and implementing a traits class, we need to use this traits-class:
+
+	template <typename IterT, typename DistT>
+	void doAdvance(IterT& iter, DistT d, std::random_access_iterrator_tag) { iter+= d;} // used to implement random access iterators
+
+	template <typename IterT, Disd d, std::bidirectional_iterator_tag>
+	{
+		// used to implement bidirectional access iterators
+		if (d >= 0)
+		{
+			while (d--)
+				++iter;
+		} else
+		{
+			while(d++)
+				--iter;
+		}
+	}
+
+	template <typename IterT, typename DistT>
+	void advance(IterT& iter, DistT d)
+	{
+		doAdvance(iter, d, typename std::iterator_traits_traits<IterT>)::iterator_category());
+	}
+
+Use a traits class:
+- Create a set of overloaded functions or function templates, the only difference between them is their respective traits parameters, so that each function implementation code corrosponds to the traits information it accepts
+- Create a control function or function templete that calls the above overloaded function and passes the information provided by the traits class
+
+Summarization:
+- Traits classes make information about types available during compilation. They're implemented using templates and template specializations.
+- In conjunction with overloading, traits classes make it possible to perform compile-time if...else tests on types.
+
+# 48. Be aware of template metaprogramming
