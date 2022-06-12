@@ -1218,3 +1218,41 @@ Summarization:
 - Templates generate multiple classes and multiple functions, so any template code not dependent on a template parameter causes bloat.
 - Bloat due to non-type template parameters can often be eliminated by replacing template parameters with function parameters or class data members.
 - Bloat due to type parameters can be reduced by sharing implementations for instiantiation types with identical binary representations.
+
+# 45. Use member function templates to accept "all compatible types"
+
+	Top* pt2 = new Bottom; // Converting Bottom to Top is simple
+	template <typename T>
+	class SmartPtr
+	{
+	public:
+		explicit SmartPtr(T* realPtr);
+	};
+
+	SmartPtr<Top> pt2 = SmartPtr<Bottom>(new Bottom); // Converting SmartPtr<Bottom> to SmartPtr<Top> is a bit troublesome
+
+	// better way
+	template <typename T>
+	class SmartPtr
+	{
+	public:
+		template <typename U>
+
+		SmartPtr(const SmartPtr<U>& other) : // generate copy constructor
+		heldPtr(other.get())
+		{}
+
+		T* get() consat
+		{
+			return heldPtr;
+		}
+	private:
+		T* heldPtr; // the built in raw pointer held by this SmartPtr
+	};
+
+Summarization:
+- Use member function templates to generate functions that accept all compatible types.
+- If you declare member templates for generalized copy construction or generalized assignment, you'll still need to declare the normal copy contructor and copy assignment operator, too.
+
+# 46. Define non-memeber functions inside templates when type conversions are desired
+
