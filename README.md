@@ -1470,3 +1470,61 @@ Summarization:
 
 - Boost is a community and web site for the development of free, open source, peer-reviewed C++ libraries. Boost plays an influential role in C++ standardization.
 - Boost offers implementations of many TR1 components, but it also offers many other libraries, too
+
+## More Effective C++
+
+### 1. Distinguish pointers and references
+
+References must point to an object, they can't refer to a null value.
+
+	char* pc = 0; // set pointer to null
+	char& rc = *pc; // undefined behavior can arise now because the reference is pointing to null
+
+Summarization:
+- Use pointers when there is a possibility that it does not point to any object and it needs to be able to point to different objects at different times.
+
+### 2. Prefer C++ style casts
+
+Was mentioned in the previous book (item 27)
+
+### 3. Never use polymorphism with Arrays
+
+	class BST { ... };
+	class BalancedBST : public BST { ... };
+
+	void printBSTArray(const BST array[])
+	{
+		for (auto i : array)
+		{
+			std::cout << *i << std::endl;
+		}
+	}
+
+	BalancedBST bstArray[10];
+	printBSTArray(bstArray);
+
+The compiler, has no emmits no warning in this case, and the object is passed according to the declared size during the transfer process, so the interval between each element is size of(BST) and the pointer points to the wrong place.
+
+### 4. Avoiud unnecessary default constructors
+
+To prevent the occurence of objects but with no necessary data.
+
+	class EP
+	{
+	public:
+		EP(int ID);
+	}
+
+This can be a problem especially when Ep is a virtual class
+
+	EP bestEP[] = {
+		EP(ID1),
+		EP(ID2),
+		...
+	}
+
+A method of an array function or a pointer:
+
+	typedef EP* PEP;
+	PEP bestPieces[10];
+	PEP *bestPieces = new PEP[10]; // then re-initialize with new when you use it
