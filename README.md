@@ -1528,3 +1528,83 @@ A method of an array function or a pointer:
 	typedef EP* PEP;
 	PEP bestPieces[10];
 	PEP *bestPieces = new PEP[10]; // then re-initialize with new when you use it
+
+### 5. Be wary of user-defined coversion functions
+
+	class Rational
+	{
+	public:
+		Rational(int numerator = 0, int denominator = 0);
+		operator double() const;
+	};
+
+	Rational r (1, 2);
+	double d = 0.5 * r; // converts r to a double for the calculation
+
+	std::cout << r << std::endl; // Will call the closest type conversion function, converts r to a double and will print it
+
+The Solution to this problem is the following:
+
+	double asDouble() const;
+
+But even if you do this, there may still be an implicit type conversion:
+
+	template <class T>
+	class Array
+	{
+	public:
+		Array(int size);
+		T& operator[](int index);
+	};
+
+	bool operator==(const Array<int> &lhs, const Array<int> &rhs);
+	Array<int> a(10), b(10);
+	if (a == b[3]) ... // if you accidentially wanted to write a[3] == b[3], the compiler will not report an error and tries to cnvert the array to an int
+
+	explicit Array(int size); // that prevents the compiler from making implicit conversions
+	if (a == b[3]) // error!!!
+
+Here is another bad case:
+
+	class Array
+	{
+	public:
+		class ArraySize
+		{
+		public:
+			ArraySize(int numElements) : theSize(numElements) {}
+			int size() const { return theSize; }
+		private:
+			int theSize;
+		};
+		Array(int lowBound, int highBound);
+		Array(ArraySize size);
+		...
+	};
+
+When you write it this way, ( a(10); ) the compiler will first convert the type to ArraySize, and then construct it. Although it can preent implicit conversion, it will make your code slower.
+
+### 6. Distinguish between prefix and postfix forms of increment and decrement operators
+
+Overloading forms of prefixes and postfix is different. And you should use prefixes whenever possible because a postfix creates an "oldvalue" that has to be constructed and destructed which makes it less effcient.
+
+	// postfix
+	const UPint UPint::operator++(int)
+	{
+		const UPint oldValue = *this;
+		++(*this);
+
+		return oldValue;
+	}
+
+### 7. Never overload &&, ||, or ,.
+
+Just because you can overload them doesn't mean you should. Overloading those functions disables short circuting.
+
+More special is the comma operator ",", it's most commenly used in for loops:
+
+	for (int i = 0, j = strlen(s) -1; i < j; ++i, ++j);
+
+Because the last part of this function uses an expression, it is illegal to separate the expression to change the values of i and j in this for loop. Using a comma expression will first calculate ++i on the left,m and then calculate ++j on the right of the comma and you can't really implement that when you overload the comma operator.
+
+### 8. Understand the meanings of new and delete in different situations
