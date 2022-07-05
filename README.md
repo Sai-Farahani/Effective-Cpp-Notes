@@ -1960,3 +1960,622 @@ Operator+ is different from Operator+=, so if you want to overload the + sign, i
 Both the stdio and iostream libraries have input and output functions, but the stdio library is faster and iostream is safer. You should use alternative libraries if it helps with your codes requirements.
 
 ### 24. Understand the costs of virtual functions, multiple nheritance, virtual base classes and RTTI
+
+The fetures you use of C++ and the compiler will greatly affect the efficiency of the program, so it is necessary to know what the compiler does behind a C++ feature
+
+For example virtual functions, the type of pointers to objects or references is not important, most compilers use virtual tables (vtbl) and virtual table pointers (vptr) for implementing those.
+
+vtbl:
+
+	class C1
+	{
+	public:
+		C1();
+		virtual ~C1();
+		virtual void f1();
+		virtual int f2(char c) const;
+		virtual void f3(const String& s);
+		void f4() const;
+	};
+
+The virtual table of vbtl is similar to the following, only the virtual functions are in it.
+
+	 ___
+	|___| → ~C1()
+	|___| → f1()
+	|___| → f2()
+	|___| → f3()
+
+If according to the above, each virtual function needs space and has an adress, then if a class with a large number of virtual functions will need a large number opf addresses to store these things, where this vtbl is places varies depending on the compiler.
+
+vptr:
+
+	 __________
+	|__________| → data for class
+	|__________| → stores the vptr
+
+Only one pointer is stored per object, but when the objects are small, more than one vptr will seem to take up a lot of space. When using vptr, the compiler will first find the corresponding vtbl through the vptr, and then start to find the pointed function through vtbl.
+
+	pC1->f1();
+
+is technically:
+
+	(*pC1->vptr[i])(pC1);
+
+When using multiple inheritance, the vptr will take up a lot of space, so you should try to not use multiple inheritance wherever possible.
+
+RTTI:
+Allows us to find the class information of objects at runtime, so there must be a place to store this information. This feature can also be implemented using a vtbl, adding an invisible data member type_info to each object to store these things, alas it can take up a lot of space.
+
+### 25. Virtualize constructors and non-memeber functions
+
+	class NewsLetter
+	{
+	private:
+		static NLComponent *readComponent(istream& str);
+		virtual NLComponent *clone() const = 0;
+	};
+
+	NewsLetter::NewsLetter(istream& str)
+	{
+		while(str)
+		{
+			components.push_back(readComponent(str));
+		}
+	}
+
+	class TextBlock : public NLComponent
+	{
+	public:
+		virtual TextBlock* clone() const
+		{
+			return new TextBlock(*this);
+		}
+	};
+
+Readfunction is a function that behaves like a constructor, because it can create new objects we cal;l it a virtual constructor.
+
+clone() is called a virtual copy constructor, which is equivalent to copying a new object
+
+	NewsLetter::NewsLetter(const NewsLetter& rhs)
+	{
+		while (str)
+		{
+			for (list<NLComponent*>::const_iterator it = rhs.component.begin(); it != rhs.component.end(); ++it)
+			{
+				components.push_back((*it)->clone());
+			}
+		}
+	}
+
+### 26. Limit the number of objects of a class
+
+The easiest way to liomit the number of objects, is to make the constructor private
+
+	class Printer
+	{
+	public:
+		friend Printer& thePrinter();
+	priavate:
+		Printer();
+		Printer(const Printer& rhs);
+	};
+
+	Printer& thePrinter()
+	{
+		staticPrinter p;
+		return p;
+	}
+
+The constructor of the Printer class is private, which can prevent hte creation of objects. The global function thePrinter is declared asa  afriend of the class, allowing thePrinter to avoid the restrictions caused by the private constructor.
+
+There is also another way of limiting the number of objects, you can add a static variable named numObjects to record the number of objects. Of course this method will have problems when inheritance occurs e.g. when Printer and a colorPrinter inherit from Printer exist at the same time, the number of numObjects will exceed the number of maxObjects.
+
+A better way is to encapsulate all the counting functions at once, if you have a large number of classes like Printer that need to be limited, and you need to ensure that each instance counting class has an iosolated counter. You should use a template for this.
+
+	template <class BeingCounted>
+	class Counted
+	{
+	public:
+		class TooManyObjects{};
+		static int objectCount()
+		{
+			rteturn numObnjects;
+		}
+	protected:
+		Counted();
+		Counted(const Counted& rhs);
+		~Counted()
+		{
+			--numObjects;
+		}
+	private:
+		static int numObjects;
+		static const size_t maxObjects;
+		vopid init()l
+	};
+
+	template <BeingCounted
+	Counted<BeingCounted>>::Counted()
+	{
+		init();
+	}
+
+	template <class BeingCounted>
+	Counted<BeingCounted>::Counted(const Counted<BeingCounted>&)
+	{
+		init();
+	}
+
+	template <class BeingCounted>
+	void Counted<BeingCounted>::init()
+	{
+		if (numObjects >= maxObjects) throw TooManyObjects;
+		++numObjects;
+	}
+
+	class Printer : private Counted<Printer>
+	{
+	public:
+		static Printer* maxPrinter();
+		using Counted<Printer>::objectCount;
+		using Counted<Printer>::TooManyObjects;
+	};
+
+### 27. Requiring or prohibiting heap-based objects
+
+If you want to force objects to be created on the heap you must disable implicit constrctors and destructors, then create a public destroy() method to call the destructor. If you encounter a problem with inheriting the destructor, (it can't be inherited), you could also just declare the destructor as protected.
+
+It is impossible to distinguish whether an object is on the heap or not.
+
+	class UPNumber
+	{
+	public:
+		class HeapConstraintViolation{};
+		static void* operator new(size_t size);
+		UPNumber();
+	private:
+		static bool onTheHeap;
+	};
+
+This code doesn't work with new[] and delete[] so it's not optimal and shouldn't be used
+
+Another method is to determine wheere the variable is located, because the stack goes down from high, while the heap goes up.
+
+	bool onHeap(const void* address)
+	{
+		chjar onTheStack;
+		return address < &onTheStack;
+	}
+
+If you want to forbit heap objects you just have to rewrite the operator new or make it private.
+
+### 28. Smart Pointers
+
+	template <class T>
+	T* SmartPtr<T>::operator->()const
+	{
+		return pointee;
+	}
+
+Testing whether the smart pointer is null(don't use the following code)
+
+	SmartPtr<TreeNode> ptn;
+	if (ptn == 0) // error
+	if (ptn) // error
+	if (!ptn) // error
+
+Therefore, an implicit type conversion operator is required to be able to perform the above operation
+
+	template <class T>
+	class SmartPtr
+	{
+	public:
+		operator void*();
+	};
+	SmartPtr<TreeNode> ptn;
+	if (ptn == 0) // works now
+	if (ptn) // works now
+	if (!ptn) // works now
+
+Smart pointers and type conversions for inherited/base classes:
+
+	class MusicProduct { ... };
+	class Cassette : public MusicProduct { ... };
+	class CD : public MusicProduct { ... };
+	displayAndPlay(const SmartPTr<MusicProduct>& pmp, int numTimes);
+
+	SmartPtr<Cassette> funMusic(new Cassette("1234));
+	SmartPtr<CD> nightmareMusic(new CD("124));
+	displayAndPlay(funMusic, 10); // error
+	displayAndPlay(nightmareMusic, 0); // error
+
+What we can see is that there is no way to convert without an implicit conversion operator:
+
+	class SmartPtr<Cassette>
+	{
+	public:
+		operator SmartPtr<MusicProduct>()
+		{
+			return SmartPtr<MusicProduct>(pointee);
+		}
+	};
+
+SmartPtrs and const:
+
+	SmartPtr<CD> p; // non const ptr non const object
+	SmartPtr<const CD> p; // non const ptr const object
+	const SmartPtr<CD> p = &goodCD; // const ptr non const object
+	const SmartPtr<const CD> p = &goodCD; // const ptr const object
+
+	templace <class T> // points to const object
+	class SmartPtrToConst
+	{
+		...
+	protected:
+		union
+		{
+			const T* constPointee;
+			T* pointee;
+		};
+	};
+
+	templace <class T>
+	class SmartPtr : public SmaartPtrToConst<T>
+	{
+		...
+	};
+
+### 29. Reference Counting
+
+Basically a smart Ptr.
+
+	template <class T>
+	class Array2D
+	{
+	public:
+		Array2D(int dim1, int dim2);
+		class Array2D{
+		public:
+			T& operator[](int index);
+			const T& operator[](int index) const;
+		};
+		Array1D operator[](int index);
+		const Array1D operator[](int index) const;
+	};
+
+	Array2D<int> data(10, 20);
+	std::cout << data[3][6]; // The [][] operator is implemented by overloading it twice
+
+### 30. Proxy classes
+
+The proxy class distinguisihes between reads and writes of the [] operator
+
+Using the delayed calculation method, modify the operator[] so that it returns a proxy character, instead of the character object itself, and judge how the proxy character is used later, so as to judge whether it is a read or write operation.
+
+	class String
+	{
+	public:
+		class CharPrxy
+		{
+		public:
+			CharProxy(String& str, int index);
+			CharProxy& operator=(const CharProxy& rhs);
+			CharProxy& operator=(char c);
+			operator char() const;
+		private:
+			String& theString;
+			int charIndex;
+		};
+		const CharPrxy operator[](index) const;
+		CharProxy operator[](int index);
+	};
+
+### 31. Making functions virtual with respect to more than one object
+
+	class GameObject { ... };
+	class SpaceShip : public GameObject { ... };
+	class SpaceStation : public GameObject { ... };
+	class Asteroid : public GameObject { ... };
+
+	void checkForCollision(GameObject& object1, GameObject& object2)
+	{
+		processCollision(object1, object2);
+	}
+
+When we call processCollision, the function depends on two different objects, but this function does not know the real types of object1 and object2. At this time, you need to design virtual functions based on multiple objects.
+
+You could use virtual functions + RTTI:
+
+	class GameObject
+	{
+	public:
+		virtual void collide(GameObject& otherObject) = 0;
+	};
+
+	class SpaceShip : public GameObject
+	{
+	public:
+		virtual void collide(GameObject& otherObject);
+	};
+
+	void SpaceShip::collide(GameObject& otherObject)
+	{
+		const type_info& objectType= typeid(otherObject);
+		if (objectType == typeid(SpaceShip))
+		{
+			SpaceShip& ss = static_cast<SpaceShip&>(otherObject);
+		} else if { ... }
+	}
+
+You can also just use virtual functions:
+
+	class SpaceShip; // forward declaration
+	class SpaceStation;
+	class Asteriod;
+	class GameObject
+	{
+	public:
+		virtual void collide(GameObject& otherObject) = 0;
+		virtual void collide(SpaceShip& otherObject) = 0;
+		virtual void collide(SpaceStation& otherObject) = 0;
+		virtual void collide(Asteriod& otherObject) = 0;
+		...
+	};
+
+Simulate the virtual function table:
+
+	class SpaceShip : public GameObject
+	{
+	public:
+		virtual void collide(GameObject& otherObject);
+		virtual void hitSpaceShip(SpaceShip& otherObject);
+		virtual void hitSpaceStation(SpaceStation& otherObject);
+		virtual void hitAsteriod(Asteriod& otherObject);
+		...
+	};
+
+Initializing the simulated function table:
+
+	class GameObject
+	{
+	public:
+		virtual void collide(GameObject& otherObject) = 0;
+		...
+	};
+
+	class SpaceShip : public GameObject
+	{
+	public:
+		virtual void collide(GameObject& otheROject);
+		// functions now all take GameObject as a parameter
+		virtual void hitSpaceShip(GameObject& spaceShip);
+		virtual void hitSpaceStation(GameObject& spaceStation);
+		virtual void hitAsteriod(GameObject& asteriod);
+		...
+	};
+
+	SpaceShip::HitMap* SpaceShip::initialzeCollisionMap()
+	{
+		HitMap *phm = new Hitmap;
+		(*phm)["SpaceShip"] = &hitSpaceShip;
+		(*phm)["SpaceStation"]= &hitSpaceStation;
+		(*phm)["Asteroid"] = &hitAsteroid;
+		return phm;
+	}
+
+### 32. Program in the future tense
+
+New functions will be added to the function library, new overloads will appear in the future so you should be aware of how ambiguous function calls behave as a result. New classes will be added to the inheritance, new environments to run in etc.
+
+### 33. Make non-leaf calsses abstract
+
+	class Animal
+	{
+	public:
+		virtual Animal& operator=(const Animal& rhs);
+		...
+	};
+
+	class Lizard : public Animal
+	{
+	public:
+		virtual Lizard& operator=(const Animal& rhs);
+	};
+
+	class Chicken : public Animal
+	{
+	public:
+		virtual Chicken& operator=(const Animal& rhs);
+	};
+
+There will be type conversions and assignments that we usually don't want to happen:
+
+	Animal *pAnimal1 = &liz;
+	Animal *pAnimal = &chick;
+	*Animal1 = *pAnimal2;
+
+But we also hope that the following operations are feasible:
+
+	Animal *pAnimal1 = &liz1;
+	Animal *pAnimal2 = &liz2;
+	// assigning a lizard to a lizard
+
+The easiest way to solve this problem is to use dynamic_cast for type checking, but another way is to make Animal an absttract class or create an AbstractAnimal class:
+
+	class AbstractAnimal
+	{
+	protected:
+		AbstractAnimal& operator=(const AbstractAnimal& rhs);
+	public:
+		virtual !AbstractAnimal() = 0;
+	};
+
+	class Animal : public AbstractAnimal
+	{
+	public:
+		Animal& operator=(const Animal& rhs);
+	};
+
+	class Lizard : public AbstractAnimal
+	{
+	public:
+		virtual Lizard& operator=(const Animal& rhs);
+	};
+
+	class Chicken : public AbstractAnimal
+	{
+	public:
+		virtual Chicken& operator(const Animal& rhs);
+	};
+
+### 34. Understand how to combine C++ and C in the same program
+
+The compiler gives C++ and C different prefixes. In C, because there is no function overloading, the compiler doesn't specifically chjange the names of functions, but in C++, the compiler gives different names to function.
+
+C++'s extern can disbale name mangling
+
+	extern 'C'
+	void drawLine(int x1, int y1, int x2, int y2);
+
+In C++, static clas objects and definitions are exceuted before main is executed. In the compiler, this approach is usually to call a function by default in main.
+
+	int main(int argc, char *argv[])
+	{
+		performStaticInitialization();
+
+		realmain();
+
+		performStaticDestruction();
+	}
+
+C++ uses new and delete, C uses malloc and free
+
+C has no way of knowing about C++ features and data structures
+
+Make sure C++ and C compilers produce compatible obj files, declare functions that are used in both languages as extern 'C', and whenever possible, use delete for new, and free for malloc
+
+### 35. Familiarize yourself with the C++ language standard
+
+Get familiar with STL and some new C++ features.
+
+Almost anything in the STL is a template, and almost everything is in the namespace std
+
+## Effective Modern C++
+
+### 1. Understand template type deduction
+
+The type deduced for T is dependent not just on the type of expression, but also on the form of ParamType. There are three cases:
+
+- Pointer or reference
+- Universal reference
+- Neither a pointer nor a reference
+
+	template <typename T>
+	void f(T& param); // param is a reference
+
+	int x = 27;
+	const int cx = x;
+	const int& rx = x;
+
+	f(x); // T's and param's types are both int
+	f(cx); // T's and param's type are still both int
+	f(rx); // T's and param's type are still both int
+
+	template <typename T>
+	void f(T&& param); // param is now a generic reference
+
+	template <typename T>
+	void f(T param); // param is now pass-by-value
+
+If you use an array or a function pointer to call, the template will automatically abstract into a pointer. If the template itself is the first case (pointer or reference), then it is automatically compiled into an array.
+
+### 2. Understand auto type deduction
+
+Type type of the auto keyword is similar to that of an template, and auto is equivalent to the T in the template:
+
+	auto x = 27; // neither ptr nor reference
+	const auto cx = x; // ditto
+	const auto& rx = x; // rx is a non generic reference
+
+	auto&& uref1 = x; //  uref1 is of type int
+	auto&& uref2 = cs; //  uref2 is of type const int&
+	auto&& uref3 = rx; // uref3 is of type int&&
+
+At the time of braced initalization, the type of auto is an instance of std::initializer+list, but the same type when initialized by a template results in an error.
+
+	auto x = { 11, 23, 9 }; // x is of type initializer_list
+	
+	template <typename T>
+	void f(T param);
+	f({ 11, 23, 9}); // error
+
+	template <typename T>
+	void f(std::initializer_list<T> initList);
+	f({ 11, 23, 9});
+
+### 3. Understand decltype
+
+	template <typename container, typename index> // works but requires refinements
+	auto authAndAccess(container& c, index i) - decltype(c[i])
+	{
+		authenticateUser();
+		return c[i];
+	}
+
+If you want to return a reference, you need to rewrite the code above into the following:
+
+	template <typename container, typename index>
+	decltype(auto) authAndAccess(container&& c, indedxd i)
+	{
+		authenticateUser()l
+		return std::forward<container>(c)[i];
+	}
+
+Some interesting application of decltype:
+
+	decltype(auto) f2()
+	{
+		int x = 0;
+		return x; // returns int
+	}
+
+	decltype(auto) f2()
+	{
+		int x = 0;
+		return (x); // returns int&
+	}
+
+### 4. Know how to view deduced types
+
+You can use the IDE to view the type, but the data types reported by the compiler are not necessarily correct, so you still need to be familiar with the types of the C++ standard.
+
+### 5. Prefer auto to explicit type deduction
+
+Wehn auto is not initalized, an error will be reported from the compiler stage, it can make the lambda expression more stable, faster, require less resources, avoid trhe problem of type truncatioon and the ambiguity caused by variable delcation:
+
+	std::vector<int> v;
+	unsigned sz = v.size();
+	auto s2 = v.size();
+
+### 6. Use the explicitly typed initializer ideom when auto deduces undesired types
+
+	std::vector<bool> features(const Widget& w);
+	Widget w;
+	auto highPriority = features(w)[5];
+
+	processWidget(w, highPriority);	
+
+### 7. Distinguish between () and {} when creating objects
+
+### 8. Prefer nullptr to 0 and NULL
+
+### 9. Prefer alias declarations to typedefs
+
+### 10. Prefer scoped enums to unscoped enums
+
+### 11. Prefer deleted functions to private undefined ones
+
+### 12. Declare overriding functions override
+
+### 13. Prefer const_iterators to iterators
