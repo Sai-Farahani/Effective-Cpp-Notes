@@ -2593,7 +2593,7 @@ Parentheses () and the equal sign = are most often unusable, and prentheses can 
 	std::atomic<int> ai1(0);
 	std::atomic<int> ai2 = 0; // error
 
-Another difference between curly braces and parentheses is that with std::initializer_list, braced initialization calls the constructor with the initializer_list:
+Another difference between curly braces and parentheses is that with std::initializer_list, braced initialization calls the constructor/function with the initializer_list:
 
 	class Widget
 	{
@@ -2606,6 +2606,8 @@ Another difference between curly braces and parentheses is that with std::initia
 	Widget w2{10, true}; // calls second constructor
 
 ### 8. Prefer nullptr to 0 and NULL
+
+Using nullptr can not only avoid some ambiguities, but also make the code clearer, and the most important thing is that nullptr can't be interpreted as an int, which avoids many problems.
 
 ### 9. Prefer alias declarations to typedefs
 
