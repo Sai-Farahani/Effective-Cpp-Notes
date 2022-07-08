@@ -2552,7 +2552,7 @@ You can use the IDE to view the type, but the data types reported by the compile
 
 ### 5. Prefer auto to explicit type deduction
 
-Wehn auto is not initalized, an error will be reported from the compiler stage, it can make the lambda expression more stable, faster, require less resources, avoid trhe problem of type truncatioon and the ambiguity caused by variable delcation:
+When auto is not initalized, an error will be reported from the compiler stage, it can make the lambda expression more stable, faster, require less resources, avoid trhe problem of type truncatioon and the ambiguity caused by variable delcation:
 
 	std::vector<int> v;
 	unsigned sz = v.size();
@@ -2564,9 +2564,46 @@ Wehn auto is not initalized, an error will be reported from the compiler stage, 
 	Widget w;
 	auto highPriority = features(w)[5];
 
-	processWidget(w, highPriority);	
+	processWidget(w, highPriority);
+
+When using:
+
+	bool highPriority = features(w)[5];
+
+There is also a way to force it to become bool:
+
+	auto highPriority = static_cast<bool>(features(w)[5]);
 
 ### 7. Distinguish between () and {} when creating objects
+
+Braced {} initialization is the most widely usable initialization syntax, it prevents narrowing conversions, and it's immune to C++'s most vexing parse
+
+	double x, y, z;
+	int sum{x + y + z}; // results in an error because braces forbid implicit conversions
+
+Parentheses () and the equal sign = are most often unusable, and prentheses can easily be mistaken as function. And those two don't type check
+
+	class Widget
+	{
+		int x{0};
+		int y = 0l
+		int z(0); // error
+	};
+
+	std::atomic<int> ai1(0);
+	std::atomic<int> ai2 = 0; // error
+
+Another difference between curly braces and parentheses is that with std::initializer_list, braced initialization calls the constructor with the initializer_list:
+
+	class Widget
+	{
+	public:
+		Widget(int i, bool b);
+		Widget(std::initializer_list><long double> il);
+	};
+
+	Widget w1(10, true); // calls first constructor
+	Widget w2{10, true}; // calls second constructor
 
 ### 8. Prefer nullptr to 0 and NULL
 
