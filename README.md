@@ -2611,6 +2611,25 @@ Using nullptr can not only avoid some ambiguities, but also make the code cleare
 
 ### 9. Prefer alias declarations to typedefs
 
+Alias declarations can make function pointers easier to understand:
+
+	// FP is equivalent to a function pointer whose arguments are of type int and const std::string with no return value
+	typedef void (*FP)(int, const std::string&);
+
+	using FP = void (*)(int, const std::string&); // Alias declaration
+
+And alias declarations allow for alias templates, while typedefs don't
+
+	template <typename T>
+	using MyAllocList = std::list<T, MyAlloc<T>>; // Equivalent to std::list<T, MyAlloc<T>>
+
+	MyAllocList<Widget> lw;
+
+Template aliases also avoid the ::type suffix, and in templates, typedefs also often require the typename prefix:
+
+	template <class T>
+	using remove_const_t = typename remove_const<T>::type;
+
 ### 10. Prefer scoped enums to unscoped enums
 
 ### 11. Prefer deleted functions to private undefined ones
