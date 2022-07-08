@@ -2632,8 +2632,166 @@ Template aliases also avoid the ::type suffix, and in templates, typedefs also o
 
 ### 10. Prefer scoped enums to unscoped enums
 
+	enum Color { blac, white, red};
+	auto white = fasle; // error because white has already been declared in this scope
+
+	enum class Color { black, white, red};
+	auto white = false; // fine because there's no other "white" in this scope
+
+A C++98-style enum is an enum without scope
+
+Enumaterion elemts of a scoped enumerator are only visible inside the enumerator and can only be converted to other types by type casting.
+
+Bot scoped and unscoped enums support specifying potential types. The default latent type of a scoped enum is int. An unscoped enum has no default underlying type.
+
+A scoped enum can always be forward-declared. An unscoped enum can only be forward-declared if the underlying type is specified.
+
 ### 11. Prefer deleted functions to private undefined ones
+
+	template <class charT, class traits = char_traits<charT>>
+	class basic_ios : public ios_base
+	{
+	public:
+		basic_ios(const basic_ios&) = delete;
+		basic_ios& operator=(const basic_ios&) = delete;
+	};
+
+The deleted function can't be used in any way. even by other memeber or friend functions, but if it's only private the compiler will complain that it's private
+
+Another advantage of delete is that any function can be deleted, but only member functions can be private:
+
+	bool isLucky(int num);
+	bool isLucky(char) = delete; // reject the char type
+
+If the code above is merly declared private it can be overloaded
 
 ### 12. Declare overriding functions override
 
+Override occurs only when the virtual function of the base class and the subclass are exactly the same. If they are not exactly the same, they will be overloaded which can result in a lot of errors:
+
+	class Base
+	{
+	public:
+		virtual void doWork();
+	};
+
+	class Derived : public Base
+	{
+	public:
+		virtual void doWork();
+	};
+
+	class Derived : public Base
+	{
+	public:
+		virtual void doWork()&&;
+	};
+
+That's why you should add "override" after the function declaration
+
 ### 13. Prefer const_iterators to iterators
+
+const_iterator wasn't very easy to use in C++98, but it's very convient in C++11
+
+### 14. Declare functions noexcept if they won't emit exceptions
+
+Because for the exception itself, whether an exception will occur or not is often what people care about, but what kind of exception is not so important, so noexcept and const are equally important informations and adding the noexcept keyword will optimize your code at compile time.
+
+For functions like swap that require exception checking, as well as move operator functions, memory releases and destructors, putting noexcept in your code will greatly improve its effciency, but you have to ensure that the function does not throw an exception.
+
+### 15. Use constexpr whenever possible
+
+You should use constexpr if the value represented is not only const, but also when its value is known at compile time.
+
+	constexpr auto arraySize = 10;
+	std::array<int, arraySize> data;
+
+But for consexpr to work all the functions arguments have to be known at compile time. Using consexpr will improve the efficiency of the program imensly.
+
+### 16. Make const member functions thread safe
+
+	class Polynomial
+	{
+	public:
+		using RootsType = std::vector<double>;
+		RootsType roots() const
+		{
+			if (!rootsAreValid)
+			{
+				rootsAreValid = true;
+			}
+			return rootVals;
+		}
+	private:
+		mutable bool rootsAreValid{false};
+		mutable RootsType rootVals{};
+	};
+
+Although roots is a const member function, the member variables are mutable and can be changed. If this is done, thread safety can't be achieved. At this time, only the mutex can be added
+
+	std::lock_guard; 
+	std::mutex g(m); 
+	mutable std::mutex m;
+
+Of course, in addition to the above approach of adding a mutex, a cheaper approach is to perform std::atomic operations:
+
+	class Point
+	{
+	public:
+		double distanceFromOriginal() const noexcept
+		{
+			++callCount;
+			return std::sqrt((x * x) + (y * y));
+		}
+	private:
+		mutable std::atomic<unsigned> callCount{0};
+		double x, y;
+	};
+
+### 17. Understand special member function generation
+
+The sepcial member functions are those compilers may generate on their own:
+- default constructor
+- default destructor
+- copy operations
+- move operations
+
+Move operations are generated only for classes lacking explicitly declared move operations, copy operations and a destructor
+
+The copy constructor is geenerated only for classes lacking an explicitly declared copy constructor, and it's deleted if a move operation is declared. The copy assignment operator is generated only for classes lacking an xplicitly declared copy assignment operator, and it's deleted if a move operator is declared. Generation of the copy operations in classes with an explicitly declared destructor is deprecated.
+
+Member function templates never suppress generation of special member functions
+
+### 18. Use std::unique_ptr for exclusive ownership resource management;
+
+### 19. Use std::shared_ptr for shared ownershiip resource management
+
+### 20. Use std::weak_ptr for std::shared_ptr like pointers that can dangle
+
+### 21. Prefer std::make_unique and std::make_shared to direct use of now
+
+### 22. When using the Pimpl idiom define special member functions in the implementation file
+
+### 23. Understand std::move and std::forward
+
+### 24. Distinguish universal references from rvalue references
+
+### 25. Use std::move on rvalue refernces, std::forward on universal references
+
+### 26. Avoid overloading on universal references
+
+### 27. Familiarize yourself with alternatives to overloading on universal references
+
+### 28. Understand reference collapsing
+
+### 29. Assume that move operators are not present, not cheap and not used
+
+### 30. Familiarize yourself with perfect forwarding failure cases
+
+### 31. Avoid default capture modes
+
+### 32. Use init capture to move objects into closures
+
+### 33. Use decltype on auto&& parameters to std::forward them
+
+### 34. Prefer lambdas to std::bin
