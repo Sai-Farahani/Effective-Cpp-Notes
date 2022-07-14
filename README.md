@@ -2762,36 +2762,497 @@ The copy constructor is geenerated only for classes lacking an explicitly declar
 
 Member function templates never suppress generation of special member functions
 
-### 18. Use std::unique_ptr for exclusive ownership resource management;
+### 18. Use std::unique_ptr for exclusive ownership resource management
+
+- std::unique+ptr is a small, fast, move-only smart pointer for managhing resources with exclusive-ownership semantics
+
+- By default, resource destruction takes place via delete, but custom delters can be specified. Stateful deleters and function pointers as deleters increase the size of std::unique_ptr objects.
+
+- Converting a std::unique_ptr to a std::shared_ptr is easy
 
 ### 19. Use std::shared_ptr for shared ownershiip resource management
 
+- std::shared_ptr is twice the size of a native pointer, because they contain a reference count in addition to a native pointer
+- Reference-counted memory must be dynamically allocated, and using make_shared to create a shared_ptr will avoid the overhead of dynamic memory
+- Incrementing and decrtementing a reference count must be atomic
+- std::shared_ptr provides the convenience of automatic garbage collection in order to manage shared memory managment of arbitrary resourcess
+- std::shared_ptr is twice as large as std::unique_ptr, in addition to control blocks, there is also the overhead caused by the need for atomic reference counting operations
+- The default destruction of resources is generally carried out by delete, but custom deleters are also supported. The type of deleter has no effect on the type of std::shared_ptr
+- You should avoid creating std::shared_ptr from raw pointer variables
+
 ### 20. Use std::weak_ptr for std::shared_ptr like pointers that can dangle
 
-### 21. Prefer std::make_unique and std::make_shared to direct use of now
+weak_ptr is usually created by a std::shared_ptr, they point to the same place, but weak_ptr does not affect the reference count of sharted_ptr:
+
+	auto spw = std::make_shared<Widget>(); // RC (ref count) is 1
+
+	std::weak_ptr<Widget> wpw(spw); .. wpw points to same Widget as spw but the RC remains 1
+
+	spw = nullptr; // RC goers to 0 and the Widget is destroyed. wpw now dangles
+
+std::weak_ptrs that dangle are said to have expired. You can test for this directly:
+
+	if (wpw.expired()) ... // if wpw doesn't point to an object
+
+So although weak_ptr looks useless, it has an application e.g. for caching
+
+	std::shared_ptr<const Widget> fastLoadWidget(WidgetID id)
+	{
+		static std::unordered_map<WidgetID, std::weak_ptr<const Widget>> cache;
+
+		auto objPtr = cache[id].lock(); // objPtr is std::shared_ptr to cached object or null if object's not in cache
+
+		if (!objPtr) {
+			// if not in cahce, load it cache it
+			objPtr = loadWidget(id);
+			cache[id] = objPtr;
+		}
+		
+		return objPtr;
+	}
+
+- std::weak_ptr is used to mimic dangling pointers
+- Potential uses of std::weak_ptr include caches, watcher lists, preventing std::shared_ptr from forming rings
+
+### 21. Prefer std::make_unique and std::make_shared to direct use of new
+
+- Compared to direct use of new, make functions eliminate source code duplication, improve exception safety, and, or std::make_shared and std::allocate_shared, generate code that's smaller and faster
+
+- Situations where use of make functions is inappropriate include the need to specify custom delters and a desire to pass braces initializers
+
+- For std::shared_ptrs, additional sitations where make functions may be ill advised include, classes with custom memory managment and systems with memory concerns, very large objects, and std::weak_ptr that outlive the corresponding std::shared_ptrs
 
 ### 22. When using the Pimpl idiom define special member functions in the implementation file
 
+To reduce the number of builds, we can write a pimpl class, to replace the object's member variables with a pointer to an already implemented class
+
+	// Widget.h
+	/*
+		If you have to include a lot of headers, it increases
+	*/
+	class Widget
+	{
+	public:
+		Widget();
+		~Widget();
+		...
+	private:
+		struct Impl; // declare implementation struct and pointer to it, for the Objects that we need
+		std::unqiue_ptr<Impl> pImpl;
+	};
+
+Now we dynamically allocate and deallocate the data members that used to be in the original class:
+
+	// Widget.cpp
+	#include "Widget.h"
+	#include "Gadget.h"
+	#include <string>
+	#include <vector>
+
+	struct Widget::Impl
+	{
+		std::string name;
+		std::vector<double> data;
+		Gadget g1, g2, g3;
+	};
+
+	Widget::Widget()
+	: pImpl(std::make_unique_ptr<Impl>())
+	{}
+
+	Widget::~Widget()
+	{}
+
+Client code:
+
+	Widget w1;
+	auto w2(std::move(w1)); // move construct w2
+
+	w1 = std::move(w2); // move assign w1
+
+- Th ePimpl Idiom decreases build times by reducing compilation dependencies between class clients and class implementations
+
+- For std::unique_ptr pImpl pointers, declare special member functions in the class header, but implement them in the implementation file. Do this even if the default function implementations are acceptable
+
+- The above advice applies to std::uniqyue_ptr, but not to std::shared_ptr
+
 ### 23. Understand std::move and std::forward
+
+Move does not move anything, and forward does not forward anything. At runtime no exceutable code is generated. These two are just functions that perform casts. std::move unconditionally casts its paramters into a rvalue, and forward will perform its casting only for references to which rvalues have been bound. The following is the pseudo code of std::move:
+
+	template <typename T>
+	decltype(auto) move(T&& param)
+	{
+		using ReturnType = remove_reference_t<T>&&;
+		return static_cast<ReturnType>(param);
+	}
+
+- std::move performs an unconditional cast to an rvalue. In and of itself, it doesn't move anything.
+- std::forward casts its argument to an rvalue only if that argument is bound to an rvalue.
+- Netiher std::move nor std::forward do anything at runtime
 
 ### 24. Distinguish universal references from rvalue references
 
+Universal references and rvalue references can be mistaken for each other in code (T&&):
+
+Rvalue reference:
+
+	void f(Widget&& param);
+	Widget&& var1 = Widget();
+
+	template <typename T>
+	void f(std::vector<T>&& param);
+
+Universal reference:
+
+	template <typename T>
+	void f(T&& param);
+
+	auto&& var2 = var1;
+
+  - If the form of the type declaration isn't precisely type&&, or if type deduction does not occur, type&& denotes an rvalue reference.
+- Universal references correspond to rvalue references, if they're initialized with rvalues. They correspond to lvalue references if they're initialized with lvalues.
+
 ### 25. Use std::move on rvalue refernces, std::forward on universal references
+
+Rvalue references are only bound to objects that can be moved. If the parameter type is an rvalue reference, the object bound to it should be movable.
+
+- Apply std::move to rvalue reference and std::forward to universal references the last time each is used
+- Do the same thing for rvalue references and universal references being returned from functions that return by value
+- Never apply std::move or std::forward to local objects if they would otherwise be eligble for the return optimization
+
+	Widget makeWidget()
+	{
+		Widget w;
+		return w;
+	}
+
+	Widget makeWidget()
+	{
+		Widget w;
+		return std::move(w); // causes negative optimization
+	}
+
+The compiler will enable return value opimization (RVO), this optimization needs to meet two conditions:
+
+- The local object type is the same as the return type of the function
+- Returns the local object itself
+
+std::move and std::forward should not be used if the local object can be optimized usign RVO
 
 ### 26. Avoid overloading on universal references
 
+Universal references will produce functions that exactly match the calling function:
+
+	template <typename T>
+	void log(T&& name) {}
+
+	void log(int name) {}
+
+	short a;
+	log(a);
+
+An exact matching log method will be generated, and then the template function will be called.
+
+The universal reference template will also compete with the copy constructor.
+
+	class Person
+	{
+	public:
+		template<typename t> explicit PErson(T&& n): name(std::forward<T>(n)) {}
+		explicit Person(int idx);
+
+		Person(const Person& rhs);
+		Person(Person&& rhs);
+	};
+
+	Person p("Nancy);
+	auto cloneOfP(p);
+
 ### 27. Familiarize yourself with alternatives to overloading on universal references
+
+- Avoid overloading and adopt a scheme of subsituting names
+- Replace references with pass-by-value
+- Use the Pimpl method
+- Restrict generic reference templates
 
 ### 28. Understand reference collapsing
 
+When an argument is passed to a function template , the decued template parameter encodes information ahout whether the argument is an lvalue or an rvalue:
+
+	template <typename T>
+	void func(T&& param);
+
+	Widget WidgetFactory();
+	Widget w;
+
+	func(w);
+	func(WidgetFactory);
+
+In C++, reference by reference is illegal, but when the result of pushing T above is Widget&, void func(Widget& &&param), lvalue refenece + rvaluie refence will appear
+
+The compiler itself will indeed hjave referneces to referneces.
+
+- If either reference is an lvalue reference, the result is an lvalue reference, otherwise an rvalue refernece
+- Reference folding occurs in four contexts: template instantiaton, auto type generation, creation and use of typedef and alias declarations, and decltype
+
 ### 29. Assume that move operators are not present, not cheap and not used
+
+- Assume that move operations don't exist, are expensive and aren't used
+- This assumption can't be made for code whose type or support for move semantics is known
+
+Move before C++11 is inefficient, but the C++11 and newer versions made the move operation faster, but when you don't know for which C++ version you're writing you should shouldn't use it
 
 ### 30. Familiarize yourself with perfect forwarding failure cases
 
+	template <typename>
+	void fwd(T&& param)
+	{
+		f*std::forward<T(param)>;
+	}
+
+	template <typename... Ts>
+	void fwd(Ts&&... param)
+	{
+		f(std::forward<Ts>(param)...);
+	}
+
+Perfect forwarding fails:
+
+	f({1, 2, 3}); // no problem, {1, 2, 3} will be implicitly converted to std::vector<int>
+	fwd({1, 2, 3}); // error, because to the brace-initialized variable was passed to a function template parameter of type std::iunitializer_list
+
+	class Widget
+	{
+	public:
+		static const std::size_t minVals = 28;
+	};
+
+	fwd(Widget::minVals); // error shouldn't be able to link, because usually references are treated as pointers, and also need to specify a piece of memory for the pointer to refer to
+
+	void f(int (*fp)(int));
+	int processValue(int value);
+	int processValue(int value, int priority);
+	fwd(processVal); // error the bare processVal doesn't have a type
+
+	struct IPv4 HEader
+	{
+		std::uint32_t version4;
+		IHL:4.
+		DSCP:6,
+		ECN:2,
+		totalLenght:16
+	};
+
+	void f(std::size_t sz);
+	IPv4Header h;
+	fwd(h.totalLength); // error
+
+- In the end, all failure sencarios boil down to the template type failing to push, or them pushing to a result that's wrong
+
 ### 31. Avoid default capture modes
+
+When using explicit capture, you can clearly let the user know the declaration cycle of the variable:
+
+	void addDivisorFilter()
+	{
+		auto divisor = computeDivisor*cal1, cal2;
+		filters.emplace_back([&](int value) { return value % divisor == 0; });
+	}
+
+The best way to do this is to pass a *this* in:
+
+	void Widget::addFilter() const
+	{
+		auto currentObjectPtr = this;
+		filters.emplace_back([currentObjectPtr](int value)
+		{
+			return valuie & currentObjectPtr->advisor == 0;
+		});
+	}
 
 ### 32. Use init capture to move objects into closures
 
+	auto func = [pw = std::make_unique<Widget>()]
+	{
+		return pw->isValidated() && pw->isArchived();
+	};
+
+	auto func = std::bind([](const std::unique_ptr<Widget>& data){}, std::make_unique<Widget>());
+
 ### 33. Use decltype on auto&& parameters to std::forward them
 
+In C++14, we can use auto in lambda expressions:
+
+	class SomeClass
+	{
+	public:
+		template <typename T>
+		auto operator()(T x) const
+		{
+			return func(normilize(x));
+		}
+	}
+
+	auto f=[](auto&& x)
+	{
+		retuyrn func(normalize(std::forward<declytype(x)>(x)));
+	}
+
+
 ### 34. Prefer lambdas to std::bin
+
+- lambda expressiions are more readable, expressive and potentially more efficient
+- Only in C++11 does bind still have a role to play
+
+### 35. Prefer taskbased programming to thread based
+
+Thread based code:
+
+	int doAsyncWork();
+	std::thread t(doAsyncWork);
+
+Task based code:
+
+	auto fut = std::async(doAsyncWork);
+
+You should prefer task-based methods. Async is able to get the return value doAsyncWork and catch exceptions if there are any and more importantly with the latter approacgm you can leave the responsibility of thread managment to the STL and don't need to solve deadlocks, load balancing new platformadaptions, etc. yourself. On top of that, software threads are cross process managment threads of the operating system capable of creating more than hardware threads but are a finite resource and when a software thread isn't avalable, an exception is thrown directly, even if it's noexcept.
+
+There are a few situations where threads are uised directly:
+
+- Need to acccess the API of the underlyng thread implementations
+- Thread optimization is required and the developed is capable
+- Need to implement technieues that are not found in the C++ concurrency API
+
+### 36. Specify std::launch::async if asynchronicity is essential
+
+- std::launch::async: When it's specified it means that the runction f must be executed asynchronously, i.e. exectued on another thread
+
+- std::launch::deferred means that f is only executed synchonously when the get or wait function is called. If get or wait isn't called, f isn't executed
+
+- If you don't specify a strategy, the system will infer what strategy needs to be carried out according to its own estimation, which will bring uncertainty. So try to specify whether it is asynchonous or synchrous, when using it.
+
+	auto fut = std::async(f);
+	if (fut.wait_for(0s) == std::future_staticLLdeferred) { ... } // determine whether it's synchrounous (deferred)
+	else {
+		while (fut.wait_for(100ms) != std::future_status::ready) { ... }
+	}
+
+
+### 37. Make std::threads unjoinable on all paths
+
+Every object of type std::thread is in two states: joinable and unjoinable
+
+- joinable: Corresponds to the thread that is blocked or waiting for scheduling that is already running, runnable or finished at the bototm layer
+- unjoinable: default construced std::thread, moved std::threadjoined stD::thread, detached std::thread
+- If std::thread is joinable and then it's destroyed, it can have serious consequences, such as causign implicit joings, whcih can cause performance expections that are hard to debug and implicit detach whci can cause undefined behavior that is also hard to debu, so you want to make sure that the thread is unjoinable on all paths.
+
+	class ThreadRAII
+	{
+	public:
+		enum class DtorACtion
+		{
+			join,
+			detach
+		};
+		ThreadRAII(std::thread&& t, DtorAction a)
+		:
+		action(a),
+		t(std::move(t)) {} // hands over the thread to ThreadRAII Process
+		~ThreadRAII()
+		{
+			if (t.joinable())
+			{
+				if (action == DtorAction::join)
+				{
+					t.join();
+				} else {
+					t.detach(); // Ensure that all paths can't go out connected
+				}
+			}
+		private:
+			DtorAction action;
+			std::thread t;
+		}
+	};
+
+### 38. Be aware of varing thread handle destructor behavior
+
+Since the return value of the called function may be executed before the caller executes get, the return value of the called threead is stored in one place, so there is a shared state.
+
+So the last return value of the shared state of a thread started in the synchronous state is kept blocking until the end of the task and the destructor of the return value will under normal circumstances, only destruct the member variable of the return value.
+
+### 39. Consider void futures for one-shot even communication
+
+Thread locks can be used instead of flag bits.
+
+	while (!flag) {}
+
+	bool flag(false);
+	std::lock_guard<std::mutex> g(m);
+	flag = true;
+
+It's not a good practise to use the flag bit. IUf you use an object of type std::prmise, the above problem can be solved, but this method needs to use heap memory for shared state, and it's limited to one-time communication.
+
+	std::promise<void> p;
+	void react();
+	void detect()
+	{
+		std::thread t([]
+		{
+			p.get_future().wait();
+			react();
+		});
+		p.set_value();
+		t.join();
+	}
+
+### 40. Use std::atomic for concurrency, volatile for special memory
+
+atomic operation:
+
+	std::atomic<int> ai(0);
+	ai = 0;
+
+volatile values:
+
+	volatile int vi(0);
+	vi = 10;
+
+Tells the compiler that the variable that's being processed should use special memory and should not be opimized
+
+	volatile int x;
+	auto y = x;
+	y = x;
+
+### 41. Consider pass by value for copyable parameters that are cheap to move and always copied
+
+When we write functions, we don't need to pass them by value, generally speaking, but if the parameters themselves are to be copied or moved, they can be passed by value. The cost of those three operations are as follows:
+
+- Overloaded operation: means one copy for lvalue, and one move for rvalue
+- Use universal reference: an lvalue means one copy, and rvalue means a move
+- Pass by value: lvalue means one copy plus one move, rvalue means two moves
+
+The cost of moving operations is inexpensive, and the parameters can be copied, because when theses two conditions are satisfied at the same the time, the efficiency of pass-by-value will not be too low
+
+### 42. Consider emplacement instead of insertion
+
+	std::vector<std::string> vs;
+	vs.push_back("xyz");
+
+Three things are happening here:
+- A temporary variable temp get created, gets casted from const char to string, temp is an rvalue
+- temp is passed to the rtvalue overloaded version of push_back, it constructs a copy of x in memory for the vector, creating a new object
+- When push_back is executed, temp gets destructed
+
+If emplace_back is used, no temporary object will be enerated, because emplace_back forwards it and that greatly improves the efficiency of the code
+
+Insering is always better than inserting unless it's not possible to add a new value. It is more efficient than inserting in the following cases
+
+- The value to be added is added to the container by construction rather than copying
+- The type of the actual parameter passed is different from the type in the container itself
+- The container is less likely to reject a new value added, (such as a map) due to duplication
+
+## Effective STL
+
+### 1. Choose your containers with care
