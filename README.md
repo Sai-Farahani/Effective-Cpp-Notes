@@ -2969,12 +2969,17 @@ The universal reference template will also compete with the copy constructor.
 	Person p("Nancy);
 	auto cloneOfP(p);
 
+- Overloading on universal references almost always leads to the universal reference overload being called more frequently than expected
+
+- Perfect-forwaring constructors are especially problematic, because they're typically better matches than copy constructors for non-const lvalues, and they can hijack derived class calls to base class copy and move constructors.
+
 ### 27. Familiarize yourself with alternatives to overloading on universal references
 
-- Avoid overloading and adopt a scheme of subsituting names
-- Replace references with pass-by-value
-- Use the Pimpl method
-- Restrict generic reference templates
+- Alternatives to the combination of universal references and overloading include the use of distincs function names, passing parameters by lvalue reference t const, passing parameters by value and using tag dispatch.
+
+- Constraining templates via std::enable_if permits the use of universal references and overloading together, but it controls the condition under which compilers may use the universal reference overloads.
+
+- Universal reference parameters often have efficiency advantages, but they typically have usability disadvantages.
 
 ### 28. Understand reference collapsing
 
@@ -2991,7 +2996,7 @@ When an argument is passed to a function template , the decued template paramete
 
 In C++, reference by reference is illegal, but when the result of pushing T above is Widget&, void func(Widget& &&param), lvalue refenece + rvaluie refence will appear
 
-The compiler itself will indeed hjave referneces to referneces.
+The compiler itself will indeed have references to references.
 
 - If either reference is an lvalue reference, the result is an lvalue reference, otherwise an rvalue refernece
 - Reference folding occurs in four contexts: template instantiaton, auto type generation, creation and use of typedef and alias declarations, and decltype
@@ -3037,18 +3042,20 @@ Perfect forwarding fails:
 
 	struct IPv4 HEader
 	{
-		std::uint32_t version4;
+		std::uint32_t version4,
 		IHL:4.
 		DSCP:6,
 		ECN:2,
-		totalLenght:16
+		totalLenght:16;
 	};
 
 	void f(std::size_t sz);
 	IPv4Header h;
 	fwd(h.totalLength); // error
 
-- In the end, all failure sencarios boil down to the template type failing to push, or them pushing to a result that's wrong
+- Perfect forwarding fails when template type deduction fails or when it deduces the wrong type.
+
+- The kinds of arguments that lead to perfect forwarding failure are braces initializers, null pointers expressed as 0 or NULL, declaration only integral const static data members, template and overloaded function names, and bitfields.
 
 ### 31. Avoid default capture modes
 
@@ -3256,3 +3263,4 @@ Insering is always better than inserting unless it's not possible to add a new v
 ## Effective STL
 
 ### 1. Choose your containers with care
+
